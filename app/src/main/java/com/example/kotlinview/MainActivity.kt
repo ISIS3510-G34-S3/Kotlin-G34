@@ -6,6 +6,8 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import com.example.kotlinview.databinding.ActivityMainBinding
 import com.google.android.material.navigation.NavigationBarView
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.setupWithNavController
 
 class MainActivity : AppCompatActivity() {
 
@@ -23,7 +25,7 @@ class MainActivity : AppCompatActivity() {
 
         // Labels visibles
         binding.bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
-
+      
         // Listener de selección: solo navega para ítems que SÍ existen en el nav_graph.
         binding.bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {

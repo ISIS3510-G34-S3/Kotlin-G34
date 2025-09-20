@@ -12,8 +12,21 @@
         tools:layout="@layout/fragment_home" />
 
     <fragment
+        android:id="@+id/navigation_dashboard"
+        android:name="com.example.kotlinview.ui.dashboard.DashboardFragment"
+        android:label="@string/title_dashboard"
+        tools:layout="@layout/fragment_dashboard" />
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.kotlinview.ui.profile.ProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/fragment_profile" />
+
+    <fragment
         android:id="@+id/createExperienceFragment"
         android:name="com.example.kotlinview.ui.create.CreateExperienceFragment"
         android:label="Create"
         tools:layout="@layout/fragment_create_experience" />
 </navigation>
+
