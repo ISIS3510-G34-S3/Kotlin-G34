@@ -5,58 +5,28 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Contenedor de destinos (Navigation Component) -->
     <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/nav_host"
+        android:id="@+id/nav_host_fragment"
         android:name="androidx.navigation.fragment.NavHostFragment"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:defaultNavHost="true"
         app:navGraph="@navigation/mobile_navigation"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/bottomNav"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/nav_top_divider" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Borde superior de la navbar -->
-    <View
-        android:id="@+id/nav_top_divider"
-        android:layout_width="0dp"
-        android:layout_height="1dp"
-        android:background="@color/ash_gray"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/nav_container" />
-
-    <!-- Contenedor de la navbar (fondo + padding fijo) -->
-    <LinearLayout
-        android:id="@+id/nav_container"
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:background="@color/british_racing_green"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
-        android:clipToPadding="false"
-        android:gravity="bottom"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
-
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottom_nav"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        app:backgroundTint="@android:color/transparent"
-        app:menu="@menu/bottom_nav_menu"
         app:itemIconTint="@color/nav_item_tint"
         app:itemTextColor="@color/nav_item_tint"
-        app:itemIconSize="24dp"
-        app:itemActiveIndicatorStyle="@style/Widget.MyApp.Navbar.ActiveIndicator"
-        app:labelVisibilityMode="labeled"/>
-    </LinearLayout>
-
+        app:menu="@menu/bottom_nav_menu"
+        app:labelVisibilityMode="labeled"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

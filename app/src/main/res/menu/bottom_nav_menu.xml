@@ -2,18 +2,17 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:id="@+id/tab_discovery"
-        android:icon="@drawable/ic_home_24"
-        android:title="Home"
-        android:checked="true" />
+        android:id="@+id/homeFragment"
+        android:icon="@drawable/ic_home_black_24dp"
+        android:title="Home" />
 
     <item
-        android:id="@+id/tab_map"
-        android:icon="@drawable/ic_map_24"
+        android:id="@+id/mapFragment"
+        android:icon="@drawable/ic_map_pin"
         android:title="Map" />
 
     <item
-        android:id="@+id/tab_create"
+        android:id="@+id/createExperienceFragment"
         android:icon="@drawable/ic_plus_24"
         android:title="Create" />
 
@@ -23,3 +22,4 @@
         android:title="Profile" />
 
 </menu>
+
