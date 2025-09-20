@@ -33,4 +33,9 @@
 
    <!-- colores para filters -->
     <color name="rufous_10">#1AA4161A</color>
+
+    <color name="gray_300">#E0E0E0</color>
+    <color name="gray_600">#757575</color>
+    <color name="gray_500">#9E9E9E</color>
+    <color name="red_600">#D32F2F</color>
 </resources>

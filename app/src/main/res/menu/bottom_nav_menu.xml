@@ -18,7 +18,8 @@
         android:title="Create" />
 
     <item
-        android:id="@+id/tab_profile"
+        android:id="@+id/profileFragment"
         android:icon="@drawable/ic_user_24"
         android:title="Profile" />
+
 </menu>

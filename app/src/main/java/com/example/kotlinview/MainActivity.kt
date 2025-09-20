@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.example.kotlinview.databinding.ActivityMainBinding
 import com.google.android.material.navigation.NavigationBarView
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.setupWithNavController
 
 class MainActivity : AppCompatActivity() {
 
@@ -18,10 +20,9 @@ class MainActivity : AppCompatActivity() {
         // Labels visibles siempre
         binding.bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
 
-        // (Opcional) marcar "Home" activo al inicio
-        binding.bottomNav.menu.findItem(R.id.tab_discovery)?.isChecked = true
+        val navHost = supportFragmentManager.findFragmentById(R.id.nav_host) as NavHostFragment
+        val navController = navHost.navController
 
-        // IMPORTANTE: sin edge-to-edge y sin listeners de insets, para que el padding del XML
-        // (4dp) no sea modificado en runtime.
+        binding.bottomNav.setupWithNavController(navController)
     }
 }
