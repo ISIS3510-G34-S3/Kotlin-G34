@@ -28,14 +28,14 @@ class FilterBottomSheet : BottomSheetDialogFragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        // ✅ Estos dos por findViewById usando los IDs definidos arriba
+        // Campos de fecha por id (evita unresolved)
         val etDateStart: EditText = view.findViewById(R.id.et_date_start)
         val etDateEnd: EditText   = view.findViewById(R.id.et_date_end)
 
         // Cerrar
         binding.btnClose.setOnClickListener { dismiss() }
 
-        // Estilos para chips
+        // Estilos para chips (color por estado)
         val bg = ContextCompat.getColorStateList(requireContext(), R.color.chip_bg_selector)
         val stroke = ContextCompat.getColorStateList(requireContext(), R.color.chip_stroke_selector)
         val text = ContextCompat.getColorStateList(requireContext(), R.color.chip_text_selector)
@@ -43,12 +43,17 @@ class FilterBottomSheet : BottomSheetDialogFragment() {
 
         fun stylize(chip: Chip) {
             chip.isCheckable = true
+            chip.isClickable = true
             chip.isCheckedIconVisible = false
             chip.setEnsureMinTouchTargetSize(false)
+
             chip.chipBackgroundColor = bg
             chip.chipStrokeColor = stroke
             chip.chipStrokeWidth = strokeWidth
             chip.setTextColor(text)
+
+            // 🔒 fuerza el toggle incluso si algún estilo lo bloquea
+            chip.setOnClickListener { chip.isChecked = !chip.isChecked }
         }
 
         // Activity (multi)
@@ -58,6 +63,9 @@ class FilterBottomSheet : BottomSheetDialogFragment() {
             stylize(chip)
             binding.chipsActivity.addView(chip)
         }
+        // Multi selección (default), no requerimos al menos uno
+        binding.chipsActivity.isSingleSelection = false
+        binding.chipsActivity.isSelectionRequired = false
 
         // Duration (single)
         durations.forEach { label ->
@@ -67,6 +75,7 @@ class FilterBottomSheet : BottomSheetDialogFragment() {
             binding.chipsDuration.addView(chip)
         }
         binding.chipsDuration.isSingleSelection = true
+        binding.chipsDuration.isSelectionRequired = false
 
         // Clear
         binding.btnClear.setOnClickListener {
@@ -84,6 +93,7 @@ class FilterBottomSheet : BottomSheetDialogFragment() {
         binding.btnApply.setOnClickListener {
             val selectedActivities = binding.chipsActivity.checkedChipIds
                 .mapNotNull { binding.chipsActivity.findViewById<Chip>(it)?.text?.toString() }
+
             val selectedDuration = binding.chipsDuration.checkedChipId.let { id ->
                 if (id != View.NO_ID) binding.chipsDuration.findViewById<Chip>(id).text.toString() else null
             }
