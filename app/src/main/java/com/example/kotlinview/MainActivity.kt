@@ -6,8 +6,6 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import com.example.kotlinview.databinding.ActivityMainBinding
 import com.google.android.material.navigation.NavigationBarView
-import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.setupWithNavController
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,12 +23,13 @@ class MainActivity : AppCompatActivity() {
 
         // Labels visibles
         binding.bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
-      
+
         // Listener de selección: solo navega para ítems que SÍ existen en el nav_graph.
         binding.bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.homeFragment,
-                R.id.createExperienceFragment -> {
+                R.id.createExperienceFragment,
+                R.id.profileFragment -> {
                     // Evita re-navegar al mismo destino
                     if (navController.currentDestination?.id != item.itemId) {
                         val options = NavOptions.Builder()
@@ -61,6 +60,7 @@ class MainActivity : AppCompatActivity() {
             when (dest.id) {
                 R.id.homeFragment -> binding.bottomNav.menu.findItem(R.id.homeFragment).isChecked = true
                 R.id.createExperienceFragment -> binding.bottomNav.menu.findItem(R.id.createExperienceFragment).isChecked = true
+                R.id.profileFragment -> binding.bottomNav.menu.findItem(R.id.profileFragment).isChecked = true
             }
         }
 
