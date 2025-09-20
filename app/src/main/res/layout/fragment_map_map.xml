@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Header -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar_map"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/ic_arrow_left_map"
+            android:background="@color/white">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_map_pin_map"
+                    app:tint="@color/british_racing_green"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:id="@+id/tv_toolbar_title_map"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Map View"
+                    android:textStyle="bold"
+                    android:textColor="@color/rufous"
+                    android:textSize="20sp"/>
+            </LinearLayout>
+        </com.google.android.material.appbar.MaterialToolbar>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Content -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/map_root_map"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <View
+            android:id="@+id/map_bg_map"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@color/white"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <FrameLayout
+            android:id="@+id/grid_overlay_map"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintTop_toTopOf="@id/map_bg_map"
+            app:layout_constraintBottom_toBottomOf="@id/map_bg_map"
+            app:layout_constraintStart_toStartOf="@id/map_bg_map"
+            app:layout_constraintEnd_toEndOf="@id/map_bg_map"/>
+
+        <!-- Guidelines -->
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline_v_33"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.33"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline_v_50"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.50"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline_v_70"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.70"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline_h_28"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.28"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline_h_50"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.50"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline_h_72"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.72"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <!-- Pin 1 (REPLACE your MaterialButton) -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/pin1_map"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:fabCustomSize="40dp"
+            app:srcCompat="@drawable/ic_map_pin_map"
+            app:tint="@color/white"
+            app:backgroundTint="@color/rufous"
+            app:layout_constraintStart_toStartOf="@id/guideline_v_33"
+            app:layout_constraintTop_toTopOf="@id/guideline_h_28"
+            android:elevation="0dp" />
+
+        <!-- Pin 2 -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/pin2_map"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:fabCustomSize="40dp"
+            app:srcCompat="@drawable/ic_map_pin_map"
+            app:tint="@color/white"
+            app:backgroundTint="@color/rufous"
+            app:layout_constraintStart_toStartOf="@id/guideline_v_50"
+            app:layout_constraintTop_toTopOf="@id/guideline_h_50"
+            android:elevation="0dp"/>
+
+        <!-- Pin 3 -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/pin3_map"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:fabCustomSize="40dp"
+            app:srcCompat="@drawable/ic_map_pin_map"
+            app:tint="@color/white"
+            app:backgroundTint="@color/rufous"
+            app:layout_constraintStart_toStartOf="@id/guideline_v_70"
+            app:layout_constraintTop_toTopOf="@id/guideline_h_72"
+            android:elevation="0dp"/>
+
+        <!-- Zoom controls -->
+        <LinearLayout
+            android:id="@+id/zoom_controls_map"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="88dp"
+            android:layout_marginEnd="16dp">
+
+            <!-- + -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:cardBackgroundColor="@color/white"
+                app:strokeColor="@color/ash_gray"
+                app:strokeWidth="1dp"
+                app:cardCornerRadius="12dp"
+                app:cardUseCompatPadding="false"
+                app:cardPreventCornerOverlap="true">
+
+                <ImageView
+                    android:id="@+id/iv_zoom_in_map"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_plus_map"
+                    app:tint="@color/british_racing_green"
+                    android:contentDescription="@string/zoom_in_map"
+                    android:gravity="center"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="8dp"/>
+
+            <!-- – -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:cardBackgroundColor="@color/white"
+                app:strokeColor="@color/ash_gray"
+                app:strokeWidth="1dp"
+                app:cardCornerRadius="12dp"
+                app:cardUseCompatPadding="false"
+                app:cardPreventCornerOverlap="true">
+
+                <ImageView
+                    android:id="@+id/iv_zoom_out_map"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_minus_map"
+                    app:tint="@color/british_racing_green"
+                    android:contentDescription="@string/zoom_out_map"
+                    android:gravity="center"/>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- Info card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/info_card_map"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/white"
+            app:strokeColor="@color/ash_gray"
+            app:strokeWidth="1dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="12dp"
+            android:translationZ="12dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="24dp"
+            android:padding="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Close row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="end">
+
+                    <ImageButton
+                        android:id="@+id/btn_close_info_map"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        app:tint="@color/ash_gray"
+                        android:contentDescription="@string/close_map" />
+                </LinearLayout>
+
+                <!-- Main content -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="4dp">
+
+                    <LinearLayout
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:background="@color/muted_bg">
+
+                        <ImageView
+                            android:id="@+id/iv_icon_map"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_zap_map"
+                            app:tint="@color/ash_gray"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:id="@+id/tv_title_map"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Title"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_primary"/>
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:paddingLeft="6dp"
+                                android:paddingRight="6dp"
+                                android:paddingTop="4dp"
+                                android:paddingBottom="4dp"
+                                android:background="@color/yellow_50"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="14dp"
+                                    android:layout_height="14dp"
+                                    android:src="@drawable/ic_star_map"
+                                    app:tint="@color/yellow_500"/>
+
+                                <TextView
+                                    android:id="@+id/tv_rating_map"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="4dp"
+                                    android:text="4.8"
+                                    android:textSize="12sp"
+                                    android:textColor="@color/yellow_700"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:id="@+id/tv_host_map"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Host Name"
+                                android:textSize="12sp"
+                                android:textColor="@color/text_secondary"/>
+
+                            <ImageView
+                                android:id="@+id/iv_verified_map"
+                                android:layout_width="14dp"
+                                android:layout_height="14dp"
+                                android:layout_marginStart="6dp"
+                                android:src="@drawable/ic_check_circle_map"
+                                app:tint="@color/chocolate_cosmos"
+                                android:visibility="gone"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center_vertical">
+
+                            <ImageView
+                                android:layout_width="14dp"
+                                android:layout_height="14dp"
+                                android:src="@drawable/ic_map_pin_map"
+                                app:tint="@color/ash_gray"/>
+
+                            <TextView
+                                android:id="@+id/tv_location_map"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="4dp"
+                                android:text="City, Country"
+                                android:textSize="12sp"
+                                android:textColor="@color/text_secondary"/>
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_learn_map"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Learn: …"
+                            android:textSize="12sp"
+                            android:textColor="@color/british_racing_green"/>
+
+                        <TextView
+                            android:id="@+id/tv_teach_map"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Teach: …"
+                            android:textSize="12sp"
+                            android:textColor="@color/rufous"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_view_details_map"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="View Details"
+                    app:backgroundTint="@color/rufous"
+                    android:textColor="@color/white"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

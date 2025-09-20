@@ -33,4 +33,13 @@
 
    <!-- colores para filters -->
     <color name="rufous_10">#1AA4161A</color>
+
+    <!-- Semantic -->
+    <color name="text_primary">#1A1A1A</color>
+    <color name="text_secondary">#6C757D</color>
+    <color name="muted_bg">#F8F9FA</color>
+
+    <!-- Rating chip yellows -->
+    <color name="yellow_500">#F59E0B</color>
+
 </resources>
