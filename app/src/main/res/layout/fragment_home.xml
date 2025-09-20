@@ -1,22 +1,151 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.home.HomeFragment">
+    android:background="@android:color/white">
 
-    <TextView
-        android:id="@+id/text_home"
-        android:layout_width="match_parent"
+    <!-- HEADER -->
+    <LinearLayout
+        android:id="@+id/header_container"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:textAlignment="center"
-        android:textSize="20sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@android:color/white"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Título + My Experiences (visible solo si userType == host) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/tv_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Discover"
+                android:textColor="@color/rufous"
+                android:textStyle="bold"
+                android:textSize="20sp"/>
+
+            <TextView
+                android:id="@+id/btn_my_experiences"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="My Experiences"
+                android:textColor="@color/rufous"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:background="@android:color/transparent"
+                android:visibility="gone"/>
+        </LinearLayout>
+
+        <!-- Search bar -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginBottom="12dp">
+
+            <EditText
+                android:id="@+id/et_search"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_search_field"
+                android:hint="Search experiences..."
+                android:paddingStart="16dp"
+                android:paddingEnd="44dp"
+                android:textColor="@color/foreground"
+                android:textColorHint="@color/muted_foreground"
+                android:singleLine="true"/>
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="14dp"
+                android:src="@drawable/ic_search"
+                app:tint="@color/muted_foreground"/>
+        </FrameLayout>
+
+        <!-- Filter & Map buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="4dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_filters"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="Filters"
+                android:textAllCaps="false"
+                android:textColor="@color/foreground"
+                app:icon="@drawable/ic_filter"
+                app:iconPadding="8dp"
+                app:iconTint="@color/muted_foreground"
+                app:strokeColor="@color/ash_gray"
+                app:strokeWidth="1dp"
+                app:backgroundTint="@android:color/white"/>
+
+            <Space
+                android:layout_width="12dp"
+                android:layout_height="1dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_map_view"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="Map View"
+                android:textAllCaps="false"
+                android:textColor="@color/foreground"
+                app:icon="@drawable/ic_map_24"
+                app:iconPadding="8dp"
+                app:iconTint="@color/muted_foreground"
+                app:strokeColor="@color/ash_gray"
+                app:strokeWidth="1dp"
+                app:backgroundTint="@android:color/white"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Línea divisoria del header -->
+    <View
+        android:id="@+id/header_divider"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:background="@color/ash_gray_30"
+        app:layout_constraintTop_toBottomOf="@id/header_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- LISTA (feed) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_experiences"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:padding="16dp"
+        android:clipToPadding="false"
+        android:background="@color/ash_gray_10"
+        app:layout_constraintTop_toBottomOf="@id/header_divider"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
