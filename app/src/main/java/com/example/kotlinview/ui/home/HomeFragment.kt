@@ -9,7 +9,6 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.kotlinview.R
 import com.example.kotlinview.databinding.FragmentHomeBinding
 import java.util.Date
 import java.util.UUID
@@ -21,27 +20,18 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var adapter: ExperienceAdapter
-
-    // Simula tipo de usuario (cambia a true si quieres ver "My Experiences")
     private val isHostUser: Boolean = false
 
-    // Fuente de datos (en un caso real: ViewModel + repo/paging)
     private val items = mutableListOf<Experience>()
     private var loadingMore = false
     private var page = 0
     private val pageSize = 8
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
 
         setupHeader()
         setupRecycler()
-
-        // Primera carga
         loadMore()
 
         return binding.root
@@ -49,12 +39,26 @@ class HomeFragment : Fragment() {
 
     private fun setupHeader() {
         binding.btnMyExperiences.isVisible = isHostUser
+
         binding.btnFilters.setOnClickListener {
-            Toast.makeText(requireContext(), "Filters (TODO)", Toast.LENGTH_SHORT).show()
+            val sheet = FilterBottomSheet.newInstance()
+            sheet.onApply = { opts ->
+                Toast.makeText(requireContext(),
+                    "Applied: ${opts.activityTypes.joinToString()} / ${opts.duration ?: "-"} / ${opts.location}",
+                    Toast.LENGTH_SHORT
+                ).show()
+                // TODO: aplica filtros a tu datasource real / ViewModel
+            }
+            sheet.onClear = {
+                Toast.makeText(requireContext(), "Cleared filters", Toast.LENGTH_SHORT).show()
+            }
+            sheet.show(childFragmentManager, "filters")
         }
+
         binding.btnMapView.setOnClickListener {
             Toast.makeText(requireContext(), "Map View (TODO)", Toast.LENGTH_SHORT).show()
         }
+
         binding.etSearch.setOnEditorActionListener { v, _, _ ->
             Toast.makeText(requireContext(), "Search: ${v.text}", Toast.LENGTH_SHORT).show()
             true
@@ -64,7 +68,6 @@ class HomeFragment : Fragment() {
     private fun setupRecycler() {
         adapter = ExperienceAdapter { exp ->
             Toast.makeText(requireContext(), "Selected: ${exp.title}", Toast.LENGTH_SHORT).show()
-            // TODO: navegar al detalle cuando tengas el destino
         }
         binding.rvExperiences.layoutManager = LinearLayoutManager(requireContext())
         binding.rvExperiences.adapter = adapter
@@ -91,7 +94,6 @@ class HomeFragment : Fragment() {
         loadingMore = false
     }
 
-    // ===== MOCK DATA (basado en tu Figma/React) =====
     private fun mockPage(page: Int, size: Int): List<Experience> {
         val base = listOf(
             Experience(
@@ -184,15 +186,13 @@ class HomeFragment : Fragment() {
             )
         )
 
-        // “Página” = base barajada + ids únicos
-        val random = base.shuffled().map {
+        return base.shuffled().map {
             it.copy(
                 id = UUID.randomUUID().toString(),
                 rating = listOf(4.5, 4.6, 4.7, 4.8, 4.9)[Random.nextInt(5)],
                 reviewCount = it.reviewCount + page * 3
             )
-        }
-        return random.take(size)
+        }.take(size)
     }
 
     override fun onDestroyView() {
