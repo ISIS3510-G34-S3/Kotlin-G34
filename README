@@ -2,3 +2,5 @@ Tomás Bedoya C. - 202020689
 Andrés Felipe Gomez - 202021189
 
 This is the repository for the Kotlin frontend development.
+
+All views can be seen from the develop branch except for the Map View, which due to conflicts had to remain in the feature/mapview_#1 branch. However, from this branch all views are observable and navigatable.
