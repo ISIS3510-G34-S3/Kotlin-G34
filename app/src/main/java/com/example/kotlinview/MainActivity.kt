@@ -24,7 +24,7 @@ class MainActivity : AppCompatActivity() {
         // Labels visibles
         binding.bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
 
-        // Listener de selección (incluye Map)
+        // Listener de selección: incluye pestaña Map -> destino Map
         binding.bottomNav.setOnItemSelectedListener { item ->
             val targetDestId = when (item.itemId) {
                 R.id.homeFragment -> R.id.homeFragment
@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
         // Reselección: no-op
         binding.bottomNav.setOnItemReselectedListener { /* no-op */ }
 
-        // Mantén sincronía con el destino
+        // Sincroniza selección
         navController.addOnDestinationChangedListener { _, dest, _ ->
             when (dest.id) {
                 R.id.homeFragment ->
@@ -74,6 +74,7 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             binding.bottomNav.selectedItemId = R.id.homeFragment
+            // Para arrancar en Map: binding.bottomNav.selectedItemId = R.id.tab_map_map
         }
     }
 }

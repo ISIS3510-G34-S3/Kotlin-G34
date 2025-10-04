@@ -20,4 +20,6 @@
         android:id="@+id/profileFragment"
         android:icon="@drawable/ic_user_24"
         android:title="Profile" />
+
 </menu>
+
