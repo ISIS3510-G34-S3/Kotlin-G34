@@ -24,23 +24,18 @@ class MainActivity : AppCompatActivity() {
         // Labels visibles
         binding.bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
 
-        // Listener de selección: solo navega para ítems que SÍ existen en el nav_graph.
+        // Listener de selección (incluye Map)
         binding.bottomNav.setOnItemSelectedListener { item ->
-            // Mapear itemId del BottomNav a destino real del NavGraph (el mapa usa ids distintos)
             val targetDestId = when (item.itemId) {
                 R.id.homeFragment -> R.id.homeFragment
                 R.id.createExperienceFragment -> R.id.createExperienceFragment
                 R.id.profileFragment -> R.id.profileFragment
-                R.id.tab_map_map -> R.id.navigation_map_map   // <-- pestaña "Map" -> destino del mapa
+                R.id.tab_map_map -> R.id.navigation_map_map
                 else -> null
             }
 
             if (targetDestId == null) return@setOnItemSelectedListener false
-
-            // Evita re-navegar al mismo destino
-            if (navController.currentDestination?.id == targetDestId) {
-                return@setOnItemSelectedListener true
-            }
+            if (navController.currentDestination?.id == targetDestId) return@setOnItemSelectedListener true
 
             val options = NavOptions.Builder()
                 .setLaunchSingleTop(true)
@@ -60,10 +55,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Reselección: no hacer nada
+        // Reselección: no-op
         binding.bottomNav.setOnItemReselectedListener { /* no-op */ }
 
-        // Mantén sincronizada la selección al navegar (por back, etc.)
+        // Mantén sincronía con el destino
         navController.addOnDestinationChangedListener { _, dest, _ ->
             when (dest.id) {
                 R.id.homeFragment ->
@@ -77,11 +72,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Selección inicial
         if (savedInstanceState == null) {
             binding.bottomNav.selectedItemId = R.id.homeFragment
-            // Si quisieras iniciar en el mapa en este branch:
-            // binding.bottomNav.selectedItemId = R.id.tab_map_map
         }
     }
 }
