@@ -28,5 +28,12 @@
         android:name="com.example.kotlinview.ui.create.CreateExperienceFragment"
         android:label="Create"
         tools:layout="@layout/fragment_create_experience" />
+
+    <fragment
+        android:id="@+id/navigation_map_map"
+        android:name="com.example.kotlinview.ui.map.MapFragmentMap"
+        android:label="Map"
+        tools:layout="@layout/fragment_map_map" />
+
 </navigation>
 
