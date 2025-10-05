@@ -3,4 +3,4 @@ Andrés Felipe Gomez - 202021189
 
 This is the repository for the Kotlin frontend development.
 
-All views can be seen from the develop branch except for the Map View, which due to conflicts had to remain in the feature/mapview-#1 branch. However, from this branch all views are observable and navigatable.
+The sprint 2 deliverables are in the develop branch.
