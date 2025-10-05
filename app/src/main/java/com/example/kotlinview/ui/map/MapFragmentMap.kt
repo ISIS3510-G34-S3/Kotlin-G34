@@ -1,72 +1,60 @@
 package com.example.kotlinview.ui.map
 
-import android.content.res.ColorStateList
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.example.kotlinview.R
+import com.example.kotlinview.core.ServiceLocator
+import com.example.kotlinview.data.map.ExperienceDtoMap
 import com.example.kotlinview.databinding.FragmentMapMapBinding
-
-data class MapExperienceMap(
-    val id: String,
-    val title: String,
-    val hostName: String,
-    val location: String,
-    val verified: Boolean,
-    val rating: Double,
-    val reviewCount: Int,
-    val teachingSkills: List<String>,
-    val learningSkills: List<String>
-)
+import com.google.android.gms.location.LocationServices
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 class MapFragmentMap : Fragment() {
 
     private var _binding: FragmentMapMapBinding? = null
     private val binding get() = _binding!!
 
-    private val mockExperiences = listOf(
-        MapExperienceMap(
-            id = "1",
-            title = "Learn Coffee Harvesting & Teach Photography",
-            hostName = "Carlos Mendoza",
-            location = "Tolima, Colombia",
-            verified = true,
-            rating = 4.9,
-            reviewCount = 18,
-            teachingSkills = listOf("Photography Techniques", "Digital Editing"),
-            learningSkills = listOf("Coffee Harvesting", "Traditional Farming Methods")
-        ),
-        MapExperienceMap(
-            id = "2",
-            title = "Fishing on Magdalena River & Practice English",
-            hostName = "María Gutierrez",
-            location = "Honda, Colombia",
-            verified = true,
-            rating = 4.7,
-            reviewCount = 12,
-            teachingSkills = listOf("English Conversation", "Basic Grammar"),
-            learningSkills = listOf("Traditional Fishing", "River Navigation")
-        ),
-        MapExperienceMap(
-            id = "3",
-            title = "Traditional Arepa Cooking & Learn Web Design",
-            hostName = "Ana Sofia Rodriguez",
-            location = "Medellín, Colombia",
-            verified = false,
-            rating = 4.8,
-            reviewCount = 24,
-            teachingSkills = listOf("Web Design Basics", "HTML/CSS Introduction"),
-            learningSkills = listOf("Arepa Making", "Traditional Cooking Methods")
-        )
-    )
+    private val viewModelMap: MapViewModelMap by viewModels {
+        MapVmFactoryMap(ServiceLocator.experiencesRepository)
+    }
 
-    private var selected: MapExperienceMap? = null
+    private var osmdroidMap: MapView? = null
+    private var myLocationOverlay: MyLocationNewOverlay? = null
+    private var selectedId: String? = null
+    private val markersById = mutableMapOf<String, Marker>()
+
+    private val requestLocationPerms = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { granted ->
+        val fine = granted[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        val coarse = granted[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (fine || coarse) enableMyLocationAndCenter()
+        else centerAndFetch(4.7110, -74.0721) // Bogotá fallback
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMapMapBinding.inflate(inflater, container, false)
@@ -74,75 +62,191 @@ class MapFragmentMap : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        // back
-        binding.toolbarMap.setNavigationOnClickListener { requireActivity().onBackPressed() }
+        Configuration.getInstance().userAgentValue = requireContext().packageName
 
-        // grid overlay (8x8 thin lines, light ash-gray)
-        addGridOverlay(binding.gridOverlayMap, rows = 8, cols = 8)
+        osmdroidMap = binding.mapViewMap.apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setBuiltInZoomControls(false) // only our buttons
+            setMultiTouchControls(true)   // pan & pinch
+            controller.setZoom(12.0)
+        }
 
-        // pins
-        binding.pin1Map.setOnClickListener { select(mockExperiences[0]) }
-        binding.pin2Map.setOnClickListener { select(mockExperiences[1]) }
-        binding.pin3Map.setOnClickListener { select(mockExperiences[2]) }
+        // keep UI simple; prototypes hidden in XML already
+        binding.toolbarMap.setNavigationOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
 
-        // zoom (mock)
-        binding.ivZoomInMap?.setOnClickListener { /* no-op */ }
-        binding.ivZoomOutMap?.setOnClickListener { /* no-op */ }
-
-        // close button
+        binding.btnZoomInMap.setOnClickListener { osmdroidMap?.controller?.zoomIn() }
+        binding.btnZoomOutMap.setOnClickListener { osmdroidMap?.controller?.zoomOut() }
         binding.btnCloseInfoMap.setOnClickListener { hideInfo() }
 
-        // tapping outside (background/grid) closes the card
-        binding.mapBgMap.setOnClickListener { hideInfo() }
-        binding.gridOverlayMap.setOnClickListener { hideInfo() }
-
-        // details
-        binding.btnViewDetailsMap.setOnClickListener {
-            selected?.let {
-                // TODO: navigate to details if/when ready
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModelMap.state.collectLatest { st ->
+                binding.progressMap.isVisible = st.isLoading
+                renderMarkers(st.items)
+                if (selectedId != null && st.items.none { it.id == selectedId }) hideInfo()
+                st.error?.let { msg ->
+                    Snackbar.make(requireView(), msg, Snackbar.LENGTH_LONG).show()
+                    viewModelMap.clearError()
+                }
             }
         }
+
+        ensureLocationPermissionThenLoad()
+    }
+
+    // ----- permissions & location -----
+
+    private fun hasLocationPermission(): Boolean {
+        val ctx = requireContext()
+        val fine = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        return fine || coarse
+    }
+
+    private fun ensureLocationPermissionThenLoad() {
+        if (hasLocationPermission()) {
+            enableMyLocationAndCenter()
+        } else {
+            requestLocationPerms.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableMyLocationAndCenter() {
+        if (!hasLocationPermission()) {
+            centerAndFetch(4.7110, -74.0721)
+            return
+        }
+
+        try {
+            val fused = LocationServices.getFusedLocationProviderClient(requireContext())
+            fused.lastLocation
+                .addOnSuccessListener { loc ->
+                    val lat = loc?.latitude ?: 4.7110
+                    val lng = loc?.longitude ?: -74.0721
+                    centerAndFetch(lat, lng)
+                }
+                .addOnFailureListener {
+                    centerAndFetch(4.7110, -74.0721)
+                }
+        } catch (_: SecurityException) {
+            centerAndFetch(4.7110, -74.0721)
+        }
+
+        if (myLocationOverlay == null && hasLocationPermission()) {
+            try {
+                myLocationOverlay = MyLocationNewOverlay(
+                    GpsMyLocationProvider(requireContext()),
+                    binding.mapViewMap
+                ).apply {
+                    enableMyLocation()
+                    enableFollowLocation()
+                }
+                binding.mapViewMap.overlays.add(myLocationOverlay)
+                binding.mapViewMap.invalidate()
+            } catch (_: SecurityException) { /* ignore */ }
+        }
+    }
+
+    private fun centerAndFetch(lat: Double, lng: Double) {
+        osmdroidMap?.controller?.setCenter(GeoPoint(lat, lng))
+        viewModelMap.fetchNearest(lat, lng, 20)
+    }
+
+    // ----- markers & selection -----
+
+    private fun renderMarkers(items: List<ExperienceDtoMap>) {
+        val map = osmdroidMap ?: return
+
+        val keepIds = items.map { it.id }.toSet()
+        val toRemove = markersById.keys - keepIds
+        toRemove.forEach { id ->
+            markersById[id]?.let { map.overlays.remove(it) }
+            markersById.remove(id)
+        }
+
+        items.forEach { dto ->
+            val lat = dto.latitude ?: return@forEach
+            val lng = dto.longitude ?: return@forEach
+            val point = GeoPoint(lat, lng)
+
+            val existing = markersById[dto.id]
+            val marker = existing ?: Marker(map).also { m ->
+                m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                m.setOnMarkerClickListener { _, _ ->
+                    selectDto(dto)
+                    true
+                }
+                map.overlays.add(m)
+                markersById[dto.id] = m
+            }
+
+            marker.position = point
+            marker.title = dto.title ?: "Experience"
+            marker.icon = tintedPinDrawable(
+                if (dto.id == selectedId) R.color.british_racing_green else R.color.rufous
+            )
+        }
+
+        bringCardToFront()
+        map.invalidate()
+    }
+
+    private fun selectDto(dto: ExperienceDtoMap) {
+        selectedId = dto.id
+
+        binding.tvTitleMap.text = dto.title ?: "Experience"
+        binding.tvRatingMap.text = String.format("%.1f", dto.avgRating ?: 0.0)
+        binding.tvLocationMap.text = dto.department ?: "Colombia"
+
+        // host
+        binding.tvHostMap.text = dto.hostName ?: "Host"
+        binding.ivVerifiedMap.isVisible = dto.hostVerified == true
+
+        // skills
+        val learn = if (dto.skillsToLearn.isNotEmpty()) dto.skillsToLearn.joinToString(", ") else "—"
+        val teach = if (dto.skillsToTeach.isNotEmpty()) dto.skillsToTeach.joinToString(", ") else "—"
+        binding.tvLearnMap.text = "Learn: $learn"
+        binding.tvTeachMap.text = "Teach: $teach"
+
+        updateAllMarkerTints()
+        bringCardToFront()
+        binding.infoCardMap.isGone = false
     }
 
     private fun hideInfo() {
-        selected = null
-        // reset pins to default (rufous)
-        val rufous = ColorStateList.valueOf(requireContext().getColor(R.color.rufous))
-        listOf(binding.pin1Map, binding.pin2Map, binding.pin3Map).forEach { it.backgroundTintList = rufous }
+        selectedId = null
         binding.infoCardMap.isGone = true
+        updateAllMarkerTints()
+        osmdroidMap?.invalidate()
     }
+
+    private fun updateAllMarkerTints() {
+        markersById.forEach { (id, marker) ->
+            marker.icon = tintedPinDrawable(
+                if (id == selectedId) R.color.british_racing_green else R.color.rufous
+            )
+        }
+    }
+
+    private fun tintedPinDrawable(colorRes: Int) =
+        ContextCompat.getDrawable(requireContext(), R.drawable.ic_map_pin_map)?.mutate()?.also { d ->
+            DrawableCompat.setTint(d, requireContext().getColor(colorRes))
+        }
 
     private fun bringCardToFront() {
         binding.infoCardMap.bringToFront()
-        binding.infoCardMap.parent?.let { (it as View).requestLayout() }
+        (binding.infoCardMap.parent as? View)?.requestLayout()
         binding.infoCardMap.invalidate()
     }
 
-
-    private fun addGridOverlay(container: FrameLayout, rows: Int, cols: Int) {
-        container.removeAllViews()
-
-        // vertical lines
-        for (c in 1 until cols) {
-            val v = View(requireContext())
-            v.setBackgroundColor(getColorAWithAlpha(R.color.ash_gray, alpha = 0.25f))
-            container.addView(v, FrameLayout.LayoutParams(1, FrameLayout.LayoutParams.MATCH_PARENT))
-            v.post {
-                val x = (container.width * (c / cols.toFloat())).toInt()
-                v.translationX = x.toFloat()
-            }
-        }
-        // horizontal lines
-        for (r in 1 until rows) {
-            val h = View(requireContext())
-            h.setBackgroundColor(getColorAWithAlpha(R.color.ash_gray, alpha = 0.25f))
-            container.addView(h, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 1))
-            h.post {
-                val y = (container.height * (r / rows.toFloat())).toInt()
-                h.translationY = y.toFloat()
-            }
-        }
-    }
+    // (grid helpers removed)
 
     private fun getColorAWithAlpha(colorRes: Int, alpha: Float): Int {
         val base = requireContext().getColor(colorRes)
@@ -153,33 +257,21 @@ class MapFragmentMap : Fragment() {
         return Color.argb(a, r, g, b)
     }
 
-    private fun select(exp: MapExperienceMap) {
-        selected = exp
+    override fun onResume() {
+        super.onResume()
+        binding.mapViewMap.onResume()
+    }
 
-        val rufous = ColorStateList.valueOf(requireContext().getColor(R.color.rufous))
-        val selectedTint = ColorStateList.valueOf(requireContext().getColor(R.color.british_racing_green))
-        listOf(binding.pin1Map, binding.pin2Map, binding.pin3Map).forEach { it.backgroundTintList = rufous }
-        when (exp.id) {
-            "1" -> binding.pin1Map.backgroundTintList = selectedTint
-            "2" -> binding.pin2Map.backgroundTintList = selectedTint
-            "3" -> binding.pin3Map.backgroundTintList = selectedTint
-        }
-
-        binding.tvTitleMap.text = exp.title
-        binding.tvRatingMap.text = "%.1f".format(exp.rating)
-        binding.tvHostMap.text = exp.hostName
-        binding.ivVerifiedMap.isVisible = exp.verified
-        binding.tvLocationMap.text = exp.location
-        binding.tvLearnMap.text = "Learn: ${exp.learningSkills.joinToString(", ")}"
-        binding.tvTeachMap.text = "Teach: ${exp.teachingSkills.joinToString(", ")}"
-
-        bringCardToFront()
-
-        binding.infoCardMap.isGone = false
+    override fun onPause() {
+        super.onPause()
+        binding.mapViewMap.onPause()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        osmdroidMap = null
+        myLocationOverlay = null
+        markersById.clear()
     }
 }
