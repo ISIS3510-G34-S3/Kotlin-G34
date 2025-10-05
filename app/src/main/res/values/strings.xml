@@ -7,4 +7,5 @@
     <string name="zoom_in_map">Zoom in</string>
     <string name="zoom_out_map">Zoom out</string>
     <string name="close_map">Close</string>
+    <string name="login_cd_compass">App logo (compass)</string>
 </resources>

@@ -1,6 +1,7 @@
 package com.example.kotlinview
 
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
@@ -16,65 +17,68 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // NavController del NavHost
         val navHost =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHost.navController
 
-        // Labels visibles
         binding.bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
 
-        // Listener de selección: incluye pestaña Map -> destino Map
+        // Navega solo en tabs con destino; el resto no hace nada
         binding.bottomNav.setOnItemSelectedListener { item ->
-            val targetDestId = when (item.itemId) {
-                R.id.homeFragment -> R.id.homeFragment
-                R.id.createExperienceFragment -> R.id.createExperienceFragment
-                R.id.profileFragment -> R.id.profileFragment
-                R.id.tab_map_map -> R.id.navigation_map_map
-                else -> null
-            }
-
-            if (targetDestId == null) return@setOnItemSelectedListener false
-            if (navController.currentDestination?.id == targetDestId) return@setOnItemSelectedListener true
-
-            val options = NavOptions.Builder()
-                .setLaunchSingleTop(true)
-                .setRestoreState(true)
-                .setPopUpTo(
-                    navController.graph.startDestinationId,
-                    inclusive = false,
-                    saveState = true
-                )
-                .build()
-
-            return@setOnItemSelectedListener try {
-                navController.navigate(targetDestId, null, options)
-                true
-            } catch (_: Exception) {
-                false
+            when (item.itemId) {
+                R.id.homeFragment,
+                R.id.createExperienceFragment,
+                R.id.profileFragment -> {
+                    if (navController.currentDestination?.id != item.itemId) {
+                        val options = NavOptions.Builder()
+                            .setLaunchSingleTop(true)
+                            .setRestoreState(true)
+                            .setPopUpTo(
+                                navController.graph.startDestinationId,
+                                inclusive = false,
+                                saveState = true
+                            )
+                            .build()
+                        navController.navigate(item.itemId, null, options)
+                    }
+                    true
+                }
+                else -> false // Map (u otros sin destino) no reaccionan
             }
         }
-
-        // Reselección: no-op
         binding.bottomNav.setOnItemReselectedListener { /* no-op */ }
 
-        // Sincroniza selección
+        // Mostrar/ocultar navbar según el destino
         navController.addOnDestinationChangedListener { _, dest, _ ->
             when (dest.id) {
-                R.id.homeFragment ->
-                    binding.bottomNav.menu.findItem(R.id.homeFragment)?.isChecked = true
-                R.id.createExperienceFragment ->
-                    binding.bottomNav.menu.findItem(R.id.createExperienceFragment)?.isChecked = true
-                R.id.profileFragment ->
-                    binding.bottomNav.menu.findItem(R.id.profileFragment)?.isChecked = true
-                R.id.navigation_map_map ->
-                    binding.bottomNav.menu.findItem(R.id.tab_map_map)?.isChecked = true
+                R.id.loginFragment -> {
+                    // Oculta completamente el navbar en Login
+                    binding.bottomNav.visibility = View.GONE
+                    binding.bottomNav.menu.setGroupCheckable(0, false, true)
+                }
+                R.id.homeFragment -> {
+                    binding.bottomNav.visibility = View.VISIBLE
+                    binding.bottomNav.menu.setGroupCheckable(0, true, true)
+                    binding.bottomNav.menu.findItem(R.id.homeFragment).isChecked = true
+                }
+                R.id.createExperienceFragment -> {
+                    binding.bottomNav.visibility = View.VISIBLE
+                    binding.bottomNav.menu.setGroupCheckable(0, true, true)
+                    binding.bottomNav.menu.findItem(R.id.createExperienceFragment).isChecked = true
+                }
+                R.id.profileFragment -> {
+                    binding.bottomNav.visibility = View.VISIBLE
+                    binding.bottomNav.menu.setGroupCheckable(0, true, true)
+                    binding.bottomNav.menu.findItem(R.id.profileFragment).isChecked = true
+                }
+                else -> {
+                    // Otros destinos: muestra navbar por defecto
+                    binding.bottomNav.visibility = View.VISIBLE
+                }
             }
         }
 
-        if (savedInstanceState == null) {
-            binding.bottomNav.selectedItemId = R.id.homeFragment
-            // Para arrancar en Map: binding.bottomNav.selectedItemId = R.id.tab_map_map
-        }
+        // ⚠️ No fuerces selección inicial de Home; debe arrancar en Login
+        // if (savedInstanceState == null) binding.bottomNav.selectedItemId = R.id.homeFragment // NO
     }
 }
