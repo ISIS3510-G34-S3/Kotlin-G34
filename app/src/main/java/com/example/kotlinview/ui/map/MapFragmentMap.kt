@@ -3,12 +3,10 @@ package com.example.kotlinview.ui.map
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
@@ -47,6 +45,9 @@ class MapFragmentMap : Fragment() {
     private var selectedId: String? = null
     private val markersById = mutableMapOf<String, Marker>()
 
+    // Log usage once per fragment lifecycle
+    private var hasLoggedUsage = false
+
     private val requestLocationPerms = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { granted ->
@@ -62,6 +63,7 @@ class MapFragmentMap : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        // OSMDroid init
         Configuration.getInstance().userAgentValue = requireContext().packageName
 
         osmdroidMap = binding.mapViewMap.apply {
@@ -205,7 +207,7 @@ class MapFragmentMap : Fragment() {
         binding.tvRatingMap.text = String.format("%.1f", dto.avgRating ?: 0.0)
         binding.tvLocationMap.text = dto.department ?: "Colombia"
 
-        // host
+        // host + verification
         binding.tvHostMap.text = dto.hostName ?: "Host"
         binding.ivVerifiedMap.isVisible = dto.hostVerified == true
 
@@ -246,19 +248,13 @@ class MapFragmentMap : Fragment() {
         binding.infoCardMap.invalidate()
     }
 
-    // (grid helpers removed)
-
-    private fun getColorAWithAlpha(colorRes: Int, alpha: Float): Int {
-        val base = requireContext().getColor(colorRes)
-        val a = (alpha * 255).toInt().coerceIn(0, 255)
-        val r = (base shr 16) and 0xFF
-        val g = (base shr 8) and 0xFF
-        val b = base and 0xFF
-        return Color.argb(a, r, g, b)
-    }
-
     override fun onResume() {
         super.onResume()
+        // Count feature usage (once per fragment instance)
+        if (!hasLoggedUsage) {
+            hasLoggedUsage = true
+            ServiceLocator.incrementFeatureUsage("map_feature")
+        }
         binding.mapViewMap.onResume()
     }
 

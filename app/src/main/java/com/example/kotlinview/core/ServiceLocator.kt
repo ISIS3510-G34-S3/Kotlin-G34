@@ -1,10 +1,15 @@
 package com.example.kotlinview.core
 
 import android.util.Log
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.example.kotlinview.data.experiences.ExperiencesRepository
 import com.example.kotlinview.data.experiences.FirestoreExperiencesRepository
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
+import com.google.firebase.firestore.SetOptions
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Super-lightweight DI for the app.
@@ -20,8 +25,7 @@ object ServiceLocator {
 
     /** Single Firestore instance (non-KTX). */
     val firestore: FirebaseFirestore by lazy {
-        // Verbose Firestore debug logs to Logcat (Network, cache, retries, etc.)
-        // Note: This is safe in debug; consider disabling for release builds.
+        // Enable Firestore debug logs in debug builds
         try {
             FirebaseFirestore.setLoggingEnabled(true)
             Log.d(TAG, "Firestore logging enabled")
@@ -31,10 +35,8 @@ object ServiceLocator {
 
         val instance = FirebaseFirestore.getInstance()
 
-        // Optional: tweak settings if you want (e.g., offline persistence)
         val settings = FirebaseFirestoreSettings.Builder()
-            // .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build()) // example
-            // .setSslEnabled(true) // default true
+            // Customize if needed (persistence/cache/etc.)
             .build()
         instance.firestoreSettings = settings
 
@@ -79,5 +81,42 @@ object ServiceLocator {
     fun dumpFirestoreConfig() {
         val s = firestore.firestoreSettings
         Log.d(TAG, "Firestore settings -> sslEnabled=${s.isSslEnabled}")
+    }
+
+    /**
+     * Increment monthly usage for a feature (e.g., "map_feature") in collection `feature_usage_monthly`.
+     * Doc ID: {featureKey}_{YYYY-MM}, fields: featureKey, date ("YYYY-MM"), count (number).
+     *
+     * This is minSdk 24–safe (uses SimpleDateFormat instead of java.time).
+     */
+    fun incrementFeatureUsage(featureKey: String) {
+        val monthStr = try {
+            val sdf = SimpleDateFormat("yyyy-MM", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }
+            sdf.format(Date())
+        } catch (t: Throwable) {
+            // Very defensive: fallback without forcing timezone if something weird happens
+            SimpleDateFormat("yyyy-MM", Locale.US).format(Date())
+        }
+
+        val docId = "${featureKey}_$monthStr"
+        val docRef = firestore.collection("feature_usage_monthly").document(docId)
+
+        firestore.runTransaction { tx ->
+            val snap = tx.get(docRef)
+            val current = snap.getLong("count") ?: 0L
+            val data = hashMapOf(
+                "featureKey" to featureKey,
+                "date" to monthStr,
+                "count" to current + 1L
+            )
+            tx.set(docRef, data, SetOptions.merge())
+            null
+        }.addOnSuccessListener {
+            Log.d(TAG, "incrementFeatureUsage($featureKey) -> $docId incremented")
+        }.addOnFailureListener { e ->
+            Log.w(TAG, "incrementFeatureUsage($featureKey) failed", e)
+        }
     }
 }
