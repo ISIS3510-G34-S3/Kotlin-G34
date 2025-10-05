@@ -3,7 +3,4 @@ Andrés Felipe Gomez - 202021189
 
 This is the repository for the Kotlin frontend development.
 
-All views can be seen from the develop branch except for the Map View, which due to conflicts had to remain in the feature/mapview-#1 branch. However, from this branch all views are observable and navigatable.
-
-3 of the 4 views are together in the develop branch. This views are tied to the ms7 release on the develop branch.
-1 view, i.e. the map view, is separately in the feature/mapview-#1 branch due to last minute merge conflicts. This view is associated to the ms7MapView release on the corresponding branch.
+The sprint 2 deliverables are in the develop branch.
