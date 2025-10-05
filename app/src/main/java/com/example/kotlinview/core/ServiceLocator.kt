@@ -10,6 +10,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import com.google.firebase.auth.FirebaseAuth
+import com.example.kotlinview.data.auth.AuthRemoteDataSource
+import com.example.kotlinview.data.auth.AuthRepository
+import com.example.kotlinview.data.user.UserRepository
+import com.example.kotlinview.data.user.FirestoreUserRepository
+import com.example.kotlinview.core.SessionManager
+import com.example.kotlinview.model.User
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Super-lightweight DI for the app.
@@ -22,6 +31,7 @@ import java.util.TimeZone
 object ServiceLocator {
 
     private const val TAG = "ServiceLocator"
+
 
     /** Single Firestore instance (non-KTX). */
     val firestore: FirebaseFirestore by lazy {
@@ -43,6 +53,12 @@ object ServiceLocator {
         Log.d(TAG, "Firestore instance created; settings applied")
         instance
     }
+
+    private var authInstance: FirebaseAuth? = null
+
+    private var authRepoInstance: AuthRepository? = null
+
+    private var userRepoInstance: UserRepository? = null
 
     @Volatile private var _overrideRepo: ExperiencesRepository? = null
     @Volatile private var _realRepo: ExperiencesRepository? = null
@@ -118,5 +134,27 @@ object ServiceLocator {
         }.addOnFailureListener { e ->
             Log.w(TAG, "incrementFeatureUsage($featureKey) failed", e)
         }
+    }
+
+    fun provideFirebaseAuth(): FirebaseAuth {
+        return authInstance ?: FirebaseAuth.getInstance().also { authInstance = it }
+    }
+
+    fun provideAuthRepository(): AuthRepository {
+        return authRepoInstance ?: AuthRepository(
+            AuthRemoteDataSource(provideFirebaseAuth())
+        ).also { authRepoInstance = it }
+    }
+
+    fun provideUserRepository(): UserRepository {
+        return userRepoInstance ?: FirestoreUserRepository(provideFirestore())
+            .also { userRepoInstance = it }
+    }
+
+    suspend fun preloadUserProfileIfLogged(): User? = withContext(Dispatchers.IO) {
+        val uid = provideAuthRepository().currentUser()?.uid ?: return@withContext null
+        val user = provideUserRepository().getUser(uid)
+        SessionManager.setUser(user)
+        return@withContext user
     }
 }

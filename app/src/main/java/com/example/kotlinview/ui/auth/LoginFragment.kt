@@ -9,11 +9,18 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinview.R
 import com.example.kotlinview.databinding.FragmentLoginBinding
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import com.example.kotlinview.data.auth.AuthResult
+import kotlinx.coroutines.flow.collectLatest
 
 class LoginFragment : Fragment() {
 
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
+
+    private val authVm: AuthViewModel by viewModels { AuthVmFactory() }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -24,13 +31,46 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding.btnLogin.setOnClickListener {
-            // Aquí harías validación real. Por ahora, navega al Home.
-            val email = binding.etEmail.text?.toString().orEmpty()
-            val pass = binding.etPassword.text?.toString().orEmpty()
+            // Ejemplo: obtén referencias a los EditText y botón
+            val emailEt = binding.emailEditText   // ajusta a tus ids reales
+            val passEt  = binding.passwordEditText
+            val loginBtn = binding.loginButton
 
-            if (email.isBlank() || pass.isBlank()) {
-                Toast.makeText(requireContext(), "Please enter email and password", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+            loginBtn.setOnClickListener {
+                val email = emailEt.text?.toString().orEmpty().trim()
+                val pass  = passEt.text?.toString().orEmpty()
+                if (email.isNotBlank() && pass.isNotBlank()) {
+                    authVm.signIn(email, pass)
+                } else {
+                    Toast.makeText(requireContext(), "Ingresa email y contraseña", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            // Auto-login si ya hay sesión (y carga perfil)
+            authVm.tryAutoLoginAndLoadProfile()
+
+            viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+                authVm.state.collectLatest { st ->
+                    when (st) {
+                        is AuthResult.Loading -> {
+                            // muestra spinner si tienes
+                        }
+                        is AuthResult.Success -> {
+                            // Navega a Home y elimina Login del backstack
+                            findNavController().navigate(
+                                R.id.homeFragment,
+                                null,
+                                androidx.navigation.NavOptions.Builder()
+                                    .setPopUpTo(R.id.loginFragment, true)
+                                    .build()
+                            )
+                        }
+                        is AuthResult.Error -> {
+                            Toast.makeText(requireContext(), st.throwable.message ?: "Error de autenticación", Toast.LENGTH_LONG).show()
+                        }
+                        null -> Unit
+                    }
+                }
             }
 
             // Navegar al Home (ajusta el id si tu destino tiene otro ID)
@@ -39,6 +79,10 @@ class LoginFragment : Fragment() {
             } catch (_: Exception) {
                 Toast.makeText(requireContext(), "Home destination not found in nav_graph", Toast.LENGTH_SHORT).show()
             }
+
+
+
+
         }
 
         binding.btnRegister.setOnClickListener {

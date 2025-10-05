@@ -20,7 +20,19 @@ class MainActivity : AppCompatActivity() {
         // NavController del NavHost
         val navHost =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+
         val navController = navHost.navController
+
+        if (FirebaseAuth.getInstance().currentUser != null &&
+            navController.currentDestination?.id == R.id.loginFragment) {
+            navController.navigate(
+                R.id.homeFragment,
+                null,
+                androidx.navigation.NavOptions.Builder()
+                    .setPopUpTo(R.id.loginFragment, true)
+                    .build()
+            )
+        }
 
         // Labels visibles
         binding.bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
