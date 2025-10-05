@@ -75,32 +75,27 @@ class MainActivity : AppCompatActivity() {
                     binding.bottomNav.menu.setGroupCheckable(0, true, true)
                     binding.bottomNav.menu.findItem(R.id.homeFragment)?.isChecked = true
                 }
+
                 R.id.createExperienceFragment -> {
                     binding.bottomNav.visibility = View.VISIBLE
                     binding.bottomNav.menu.setGroupCheckable(0, true, true)
                     binding.bottomNav.menu.findItem(R.id.createExperienceFragment)?.isChecked = true
                 }
+
                 R.id.profileFragment -> {
                     binding.bottomNav.visibility = View.VISIBLE
                     binding.bottomNav.menu.setGroupCheckable(0, true, true)
                     binding.bottomNav.menu.findItem(R.id.profileFragment)?.isChecked = true
                 }
-                R.id.navigation_map_map -> { // 👈 sincroniza con tu item del menú
+
+                R.id.navigation_map_map -> {
                     binding.bottomNav.visibility = View.VISIBLE
                     binding.bottomNav.menu.setGroupCheckable(0, true, true)
                     binding.bottomNav.menu.findItem(R.id.tab_map_map)?.isChecked = true
                 }
 
-                // Otros destinos (si los hubiera): muestra navbar por defecto
                 else -> binding.bottomNav.visibility = View.VISIBLE
             }
         }
-
-        // ⚠️ IMPORTANTE: ya no forzamos selección inicial del navbar.
-        // Antes tenías:
-        // if (savedInstanceState == null) {
-        //     binding.bottomNav.selectedItemId = R.id.homeFragment
-        // }
-        // → quítalo para que arranque en Login sin seleccionar tab.
     }
 }
