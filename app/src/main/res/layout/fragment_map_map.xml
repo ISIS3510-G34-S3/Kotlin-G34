@@ -51,26 +51,41 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
+        <!-- OSMDroid map -->
+        <org.osmdroid.views.MapView
+            android:id="@+id/mapView_map"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:clickable="true"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Transparent overlay bg -->
         <View
             android:id="@+id/map_bg_map"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:background="@color/white"
+            android:background="@android:color/transparent"
+            android:clickable="false"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
+        <!-- Optional grid overlay -->
         <FrameLayout
             android:id="@+id/grid_overlay_map"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            app:layout_constraintTop_toTopOf="@id/map_bg_map"
-            app:layout_constraintBottom_toBottomOf="@id/map_bg_map"
-            app:layout_constraintStart_toStartOf="@id/map_bg_map"
-            app:layout_constraintEnd_toEndOf="@id/map_bg_map"/>
+            android:clickable="false"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
 
-        <!-- Guidelines -->
+        <!-- Guidelines (kept, optional) -->
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guideline_v_33"
             android:orientation="vertical"
@@ -108,9 +123,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
 
-        <!-- Pin 1 (REPLACE your MaterialButton) -->
+        <!-- Prototype pins kept hidden -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/pin1_map"
+            android:visibility="gone"
             android:layout_width="40dp"
             android:layout_height="40dp"
             app:fabCustomSize="40dp"
@@ -121,9 +137,9 @@
             app:layout_constraintTop_toTopOf="@id/guideline_h_28"
             android:elevation="0dp" />
 
-        <!-- Pin 2 -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/pin2_map"
+            android:visibility="gone"
             android:layout_width="40dp"
             android:layout_height="40dp"
             app:fabCustomSize="40dp"
@@ -134,9 +150,9 @@
             app:layout_constraintTop_toTopOf="@id/guideline_h_50"
             android:elevation="0dp"/>
 
-        <!-- Pin 3 -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/pin3_map"
+            android:visibility="gone"
             android:layout_width="40dp"
             android:layout_height="40dp"
             app:fabCustomSize="40dp"
@@ -146,6 +162,18 @@
             app:layout_constraintStart_toStartOf="@id/guideline_v_70"
             app:layout_constraintTop_toTopOf="@id/guideline_h_72"
             android:elevation="0dp"/>
+
+        <!-- Loading -->
+        <ProgressBar
+            android:id="@+id/progress_map"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:indeterminate="true"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
 
         <!-- Zoom controls -->
         <LinearLayout
@@ -158,10 +186,12 @@
             android:layout_marginTop="88dp"
             android:layout_marginEnd="16dp">
 
-            <!-- + -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btn_zoom_in_map"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
+                android:clickable="true"
+                android:focusable="true"
                 app:cardBackgroundColor="@color/white"
                 app:strokeColor="@color/ash_gray"
                 app:strokeWidth="1dp"
@@ -170,13 +200,12 @@
                 app:cardPreventCornerOverlap="true">
 
                 <ImageView
-                    android:id="@+id/iv_zoom_in_map"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:padding="12dp"
                     android:src="@drawable/ic_plus_map"
                     app:tint="@color/british_racing_green"
-                    android:contentDescription="@string/zoom_in_map"
+                    android:contentDescription="@null"
                     android:gravity="center"/>
             </com.google.android.material.card.MaterialCardView>
 
@@ -184,10 +213,12 @@
                 android:layout_width="0dp"
                 android:layout_height="8dp"/>
 
-            <!-- – -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btn_zoom_out_map"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
+                android:clickable="true"
+                android:focusable="true"
                 app:cardBackgroundColor="@color/white"
                 app:strokeColor="@color/ash_gray"
                 app:strokeWidth="1dp"
@@ -196,18 +227,17 @@
                 app:cardPreventCornerOverlap="true">
 
                 <ImageView
-                    android:id="@+id/iv_zoom_out_map"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:padding="12dp"
                     android:src="@drawable/ic_minus_map"
                     app:tint="@color/british_racing_green"
-                    android:contentDescription="@string/zoom_out_map"
+                    android:contentDescription="@null"
                     android:gravity="center"/>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- Info card -->
+        <!-- Info card (no View Details button) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/info_card_map"
             android:layout_width="0dp"
@@ -232,7 +262,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Close row -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -245,10 +274,9 @@
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@android:drawable/ic_menu_close_clear_cancel"
                         app:tint="@color/ash_gray"
-                        android:contentDescription="@string/close_map" />
+                        android:contentDescription="@null" />
                 </LinearLayout>
 
-                <!-- Main content -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -388,15 +416,6 @@
                             android:textColor="@color/rufous"/>
                     </LinearLayout>
                 </LinearLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_view_details_map"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="View Details"
-                    app:backgroundTint="@color/rufous"
-                    android:textColor="@color/white"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </androidx.constraintlayout.widget.ConstraintLayout>
