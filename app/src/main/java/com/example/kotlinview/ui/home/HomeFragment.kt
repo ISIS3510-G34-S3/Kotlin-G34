@@ -1,6 +1,7 @@
 package com.example.kotlinview.ui.home
 
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,6 +10,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.kotlinview.core.ServiceLocator
 import com.example.kotlinview.databinding.FragmentHomeBinding
 import java.util.Date
 import java.util.UUID
@@ -27,6 +29,9 @@ class HomeFragment : Fragment() {
     private var page = 0
     private val pageSize = 8
 
+    // Debounce for feature usage increment
+    private var lastFeaturePingMs = 0L
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
 
@@ -37,17 +42,31 @@ class HomeFragment : Fragment() {
         return binding.root
     }
 
+    override fun onResume() {
+        super.onResume()
+        maybeIncrementUsage()
+    }
+
+    private fun maybeIncrementUsage() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastFeaturePingMs > 3000) {
+            ServiceLocator.incrementFeatureUsage("experience_catalogue_feature")
+            lastFeaturePingMs = now
+        }
+    }
+
     private fun setupHeader() {
         binding.btnMyExperiences.isVisible = isHostUser
 
         binding.btnFilters.setOnClickListener {
             val sheet = FilterBottomSheet.newInstance()
             sheet.onApply = { opts ->
-                Toast.makeText(requireContext(),
+                Toast.makeText(
+                    requireContext(),
                     "Applied: ${opts.activityTypes.joinToString()} / ${opts.duration ?: "-"} / ${opts.location}",
                     Toast.LENGTH_SHORT
                 ).show()
-                // TODO: aplica filtros a tu datasource real / ViewModel
+                // TODO: apply filters to real datasource / ViewModel
             }
             sheet.onClear = {
                 Toast.makeText(requireContext(), "Cleared filters", Toast.LENGTH_SHORT).show()
