@@ -15,6 +15,11 @@ import com.example.kotlinview.databinding.FragmentHomeBinding
 import java.util.Date
 import java.util.UUID
 import kotlin.random.Random
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collectLatest
+import com.example.kotlinview.core.SessionManager
+import android.util.Log
+import kotlinx.coroutines.launch
 
 class HomeFragment : Fragment() {
 
@@ -218,4 +223,15 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            SessionManager.currentUser.collectLatest { user ->
+                Log.i("Session", "currentUser = $user")
+            }
+        }
+    }
+
 }

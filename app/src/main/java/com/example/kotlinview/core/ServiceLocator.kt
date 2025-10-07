@@ -32,6 +32,30 @@ object ServiceLocator {
 
     private const val TAG = "ServiceLocator"
 
+    // Singleton Firestore
+    private var firestoreInstance: FirebaseFirestore? = null
+    fun provideFirestore(): FirebaseFirestore {
+        val existing = firestoreInstance
+        if (existing != null) return existing
+
+        val db = FirebaseFirestore.getInstance()
+
+        firestoreInstance = db
+        return db
+    }
+
+    fun provideFirebaseAuth(): FirebaseAuth {
+        return authInstance ?: FirebaseAuth.getInstance().also { authInstance = it }
+    }
+
+    fun provideUserRepository(): UserRepository =
+        userRepoInstance ?: FirestoreUserRepository(provideFirestore()).also { userRepoInstance = it }
+
+    private var experiencesRepoInstance: ExperiencesRepository? = null
+    fun provideExperiencesRepository(): ExperiencesRepository {
+        return experiencesRepoInstance
+            ?: FirestoreExperiencesRepository(provideFirestore()).also { experiencesRepoInstance = it }
+    }
 
     /** Single Firestore instance (non-KTX). */
     val firestore: FirebaseFirestore by lazy {
@@ -136,24 +160,21 @@ object ServiceLocator {
         }
     }
 
-    fun provideFirebaseAuth(): FirebaseAuth {
-        return authInstance ?: FirebaseAuth.getInstance().also { authInstance = it }
-    }
-
     fun provideAuthRepository(): AuthRepository {
         return authRepoInstance ?: AuthRepository(
             AuthRemoteDataSource(provideFirebaseAuth())
         ).also { authRepoInstance = it }
     }
 
-    fun provideUserRepository(): UserRepository {
-        return userRepoInstance ?: FirestoreUserRepository(provideFirestore())
-            .also { userRepoInstance = it }
-    }
-
     suspend fun preloadUserProfileIfLogged(): User? = withContext(Dispatchers.IO) {
-        val uid = provideAuthRepository().currentUser()?.uid ?: return@withContext null
-        val user = provideUserRepository().getUser(uid)
+        val firebaseUser = provideFirebaseAuth().currentUser ?: return@withContext null
+        val email = firebaseUser.email ?: return@withContext null
+
+        val repo = provideUserRepository()
+
+        runCatching { repo.setLastSignInNow(email) }
+
+        val user = repo.getByEmail(email)
         SessionManager.setUser(user)
         return@withContext user
     }

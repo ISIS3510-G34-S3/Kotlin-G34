@@ -9,5 +9,6 @@ interface ExperiencesRepository {
      * Only active experiences with valid coordinates are returned.
      */
     suspend fun getNearest(lat: Double, lng: Double, topK: Int = 20): List<ExperienceDtoMap>
+    suspend fun getExperiences(limit: Int? = null): List<ExperienceDtoMap>
 
 }

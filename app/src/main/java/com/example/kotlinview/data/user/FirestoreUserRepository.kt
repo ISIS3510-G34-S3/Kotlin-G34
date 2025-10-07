@@ -1,6 +1,8 @@
 package com.example.kotlinview.data.user
 
 import com.example.kotlinview.model.User
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
@@ -8,16 +10,28 @@ class FirestoreUserRepository(
     private val db: FirebaseFirestore
 ) : UserRepository {
 
-    override suspend fun getUser(uid: String): User? {
-        val snap = db.collection("users").document(uid).get().await()
+    override suspend fun getByEmail(email: String): User? {
+        if (email.isBlank()) return null
+        val snap = db.collection("users").document(email).get().await()
         if (!snap.exists()) return null
-        val data = snap.data ?: return null
+        val d = snap.data ?: return null
+
         return User(
-            uid = uid,
-            displayName = (data["displayName"] as? String).orEmpty(),
-            email = (data["email"] as? String).orEmpty(),
-            interestedCategories = (data["interestedCategories"] as? List<*>)?.filterIsInstance<String>().orEmpty(),
-            verified = (data["verified"] as? Boolean) ?: false
+            email = email,
+            displayName = (d["displayName"] as? String).orEmpty(),
+            photoURL = (d["photoURL"] as? String).orEmpty(),
+            provider = (d["provider"] as? String).orEmpty(),
+            userType = (d["userType"] as? String).orEmpty(),
+            createdAt = d["createdAt"] as? Timestamp,
+            lastSignInAt = d["lastSignInAt"] as? Timestamp
         )
+    }
+
+    override suspend fun setLastSignInNow(email: String) {
+        if (email.isBlank()) return
+        db.collection("users")
+            .document(email)
+            .update(mapOf("lastSignInAt" to FieldValue.serverTimestamp()))
+            .await()
     }
 }

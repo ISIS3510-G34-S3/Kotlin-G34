@@ -1,9 +1,13 @@
 package com.example.kotlinview.model
 
+import com.google.firebase.Timestamp
+
 data class User(
-    val uid: String = "",
-    val displayName: String = "",
     val email: String = "",
-    val interestedCategories: List<String> = emptyList(), // para futuro matching
-    val verified: Boolean = false,
+    val displayName: String = "",
+    val photoURL: String = "",
+    val provider: String = "",
+    val userType: String = "",
+    val createdAt: Timestamp? = null,
+    val lastSignInAt: Timestamp? = null
 )
