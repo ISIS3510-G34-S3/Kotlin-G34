@@ -6,14 +6,21 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinview.R
+import com.example.kotlinview.data.auth.AuthResult
 import com.example.kotlinview.databinding.FragmentLoginBinding
+import kotlinx.coroutines.flow.collectLatest
 
 class LoginFragment : Fragment() {
 
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
+
+    private val authVm: AuthViewModel by viewModels { AuthVmFactory() }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -23,28 +30,56 @@ class LoginFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding.btnLogin.setOnClickListener {
-            // Aquí harías validación real. Por ahora, navega al Home.
-            val email = binding.etEmail.text?.toString().orEmpty()
-            val pass = binding.etPassword.text?.toString().orEmpty()
+        super.onViewCreated(view, savedInstanceState)
 
+        // 1) Click de Login: SOLO dispara el signIn. NO navegar aquí.
+        binding.btnLogin.setOnClickListener {
+            val email = binding.etEmail.text?.toString().orEmpty().trim()
+            val pass  = binding.etPassword.text?.toString().orEmpty()
             if (email.isBlank() || pass.isBlank()) {
-                Toast.makeText(requireContext(), "Please enter email and password", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Ingresa email y contraseña", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+            authVm.signIn(email, pass)
+        }
 
-            // Navegar al Home (ajusta el id si tu destino tiene otro ID)
-            try {
-                findNavController().navigate(R.id.homeFragment)
-            } catch (_: Exception) {
-                Toast.makeText(requireContext(), "Home destination not found in nav_graph", Toast.LENGTH_SHORT).show()
+        // (Opcional) Botón de registro si luego lo implementas
+        // binding.btnRegister.setOnClickListener { /* abrir pantalla de registro */ }
+
+        // 2) Observa el estado y SOLO navega cuando sea Success
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            authVm.state.collectLatest { st ->
+                when (st) {
+                    is AuthResult.Loading -> {
+                        // muestra un spinner si quieres
+                        binding.btnLogin.isEnabled = false
+                    }
+                    is AuthResult.Success -> {
+                        binding.btnLogin.isEnabled = true
+                        // Navega a Home y saca Login del back stack
+                        findNavController().navigate(
+                            R.id.homeFragment,
+                            null,
+                            NavOptions.Builder()
+                                .setPopUpTo(R.id.loginFragment, true)
+                                .build()
+                        )
+                    }
+                    is AuthResult.Error -> {
+                        binding.btnLogin.isEnabled = true
+                        Toast.makeText(
+                            requireContext(),
+                            st.throwable.message ?: "Error de autenticación",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    null -> Unit
+                }
             }
         }
 
-        binding.btnRegister.setOnClickListener {
-            // TODO: llevar a RegisterFragment cuando lo tengas. Por ahora un toast.
-            Toast.makeText(requireContext(), "Go to registration", Toast.LENGTH_SHORT).show()
-        }
+        // 3) Si ya hay sesión previa, el VM lo detecta y emitirá Success (no navegues manualmente aquí)
+        authVm.tryAutoLoginAndLoadProfile()
     }
 
     override fun onDestroyView() {

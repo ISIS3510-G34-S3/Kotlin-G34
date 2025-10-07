@@ -7,6 +7,7 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import com.example.kotlinview.databinding.ActivityMainBinding
 import com.google.android.material.navigation.NavigationBarView
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,7 +21,19 @@ class MainActivity : AppCompatActivity() {
         // NavController del NavHost
         val navHost =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+
         val navController = navHost.navController
+
+        if (FirebaseAuth.getInstance().currentUser != null &&
+            navController.currentDestination?.id == R.id.loginFragment) {
+            navController.navigate(
+                R.id.homeFragment,
+                null,
+                androidx.navigation.NavOptions.Builder()
+                    .setPopUpTo(R.id.loginFragment, true)
+                    .build()
+            )
+        }
 
         // Labels visibles
         binding.bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
@@ -75,32 +88,27 @@ class MainActivity : AppCompatActivity() {
                     binding.bottomNav.menu.setGroupCheckable(0, true, true)
                     binding.bottomNav.menu.findItem(R.id.homeFragment)?.isChecked = true
                 }
+
                 R.id.createExperienceFragment -> {
                     binding.bottomNav.visibility = View.VISIBLE
                     binding.bottomNav.menu.setGroupCheckable(0, true, true)
                     binding.bottomNav.menu.findItem(R.id.createExperienceFragment)?.isChecked = true
                 }
+
                 R.id.profileFragment -> {
                     binding.bottomNav.visibility = View.VISIBLE
                     binding.bottomNav.menu.setGroupCheckable(0, true, true)
                     binding.bottomNav.menu.findItem(R.id.profileFragment)?.isChecked = true
                 }
-                R.id.navigation_map_map -> { // 👈 sincroniza con tu item del menú
+
+                R.id.navigation_map_map -> {
                     binding.bottomNav.visibility = View.VISIBLE
                     binding.bottomNav.menu.setGroupCheckable(0, true, true)
                     binding.bottomNav.menu.findItem(R.id.tab_map_map)?.isChecked = true
                 }
 
-                // Otros destinos (si los hubiera): muestra navbar por defecto
                 else -> binding.bottomNav.visibility = View.VISIBLE
             }
         }
-
-        // ⚠️ IMPORTANTE: ya no forzamos selección inicial del navbar.
-        // Antes tenías:
-        // if (savedInstanceState == null) {
-        //     binding.bottomNav.selectedItemId = R.id.homeFragment
-        // }
-        // → quítalo para que arranque en Login sin seleccionar tab.
     }
 }

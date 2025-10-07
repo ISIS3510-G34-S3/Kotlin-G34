@@ -67,9 +67,10 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
     // Firebase BoM + Firestore (non-KTX)
-    implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
     implementation("com.google.firebase:firebase-firestore")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+    implementation("com.google.firebase:firebase-auth-ktx")
     implementation(libs.navigation.fragment.ktx)
     implementation(libs.navigation.ui.ktx)
 }

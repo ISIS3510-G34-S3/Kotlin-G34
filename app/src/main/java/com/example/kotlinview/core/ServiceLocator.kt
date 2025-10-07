@@ -10,6 +10,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import com.google.firebase.auth.FirebaseAuth
+import com.example.kotlinview.data.auth.AuthRemoteDataSource
+import com.example.kotlinview.data.auth.AuthRepository
+import com.example.kotlinview.data.user.UserRepository
+import com.example.kotlinview.data.user.FirestoreUserRepository
+import com.example.kotlinview.core.SessionManager
+import com.example.kotlinview.model.User
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Super-lightweight DI for the app.
@@ -22,6 +31,31 @@ import java.util.TimeZone
 object ServiceLocator {
 
     private const val TAG = "ServiceLocator"
+
+    // Singleton Firestore
+    private var firestoreInstance: FirebaseFirestore? = null
+    fun provideFirestore(): FirebaseFirestore {
+        val existing = firestoreInstance
+        if (existing != null) return existing
+
+        val db = FirebaseFirestore.getInstance()
+
+        firestoreInstance = db
+        return db
+    }
+
+    fun provideFirebaseAuth(): FirebaseAuth {
+        return authInstance ?: FirebaseAuth.getInstance().also { authInstance = it }
+    }
+
+    fun provideUserRepository(): UserRepository =
+        userRepoInstance ?: FirestoreUserRepository(provideFirestore()).also { userRepoInstance = it }
+
+    private var experiencesRepoInstance: ExperiencesRepository? = null
+    fun provideExperiencesRepository(): ExperiencesRepository {
+        return experiencesRepoInstance
+            ?: FirestoreExperiencesRepository(provideFirestore()).also { experiencesRepoInstance = it }
+    }
 
     /** Single Firestore instance (non-KTX). */
     val firestore: FirebaseFirestore by lazy {
@@ -43,6 +77,12 @@ object ServiceLocator {
         Log.d(TAG, "Firestore instance created; settings applied")
         instance
     }
+
+    private var authInstance: FirebaseAuth? = null
+
+    private var authRepoInstance: AuthRepository? = null
+
+    private var userRepoInstance: UserRepository? = null
 
     @Volatile private var _overrideRepo: ExperiencesRepository? = null
     @Volatile private var _realRepo: ExperiencesRepository? = null
@@ -118,5 +158,24 @@ object ServiceLocator {
         }.addOnFailureListener { e ->
             Log.w(TAG, "incrementFeatureUsage($featureKey) failed", e)
         }
+    }
+
+    fun provideAuthRepository(): AuthRepository {
+        return authRepoInstance ?: AuthRepository(
+            AuthRemoteDataSource(provideFirebaseAuth())
+        ).also { authRepoInstance = it }
+    }
+
+    suspend fun preloadUserProfileIfLogged(): User? = withContext(Dispatchers.IO) {
+        val firebaseUser = provideFirebaseAuth().currentUser ?: return@withContext null
+        val email = firebaseUser.email ?: return@withContext null
+
+        val repo = provideUserRepository()
+
+        runCatching { repo.setLastSignInNow(email) }
+
+        val user = repo.getByEmail(email)
+        SessionManager.setUser(user)
+        return@withContext user
     }
 }
