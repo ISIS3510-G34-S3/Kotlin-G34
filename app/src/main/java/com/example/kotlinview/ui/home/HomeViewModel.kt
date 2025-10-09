@@ -1,36 +1,63 @@
 package com.example.kotlinview.ui.home
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import com.example.kotlinview.core.SessionManager
 import com.example.kotlinview.core.ServiceLocator
-import com.example.kotlinview.model.Experience
-import androidx.lifecycle.viewModelScope
 import com.example.kotlinview.data.map.ExperienceDtoMap
-import kotlinx.coroutines.launch
+import android.util.Log
+
+data class FeedUiState(
+    val loading: Boolean = false,
+    val items: List<Experience> = emptyList(), // UI model de este paquete
+    val error: Throwable? = null
+)
 
 class HomeViewModel : ViewModel() {
 
-    private val _items = MutableStateFlow<List<ExperienceDtoMap>>(emptyList())
-    val items: StateFlow<List<ExperienceDtoMap>> = _items
+    private val _state = MutableStateFlow(FeedUiState())
+    val state: StateFlow<FeedUiState> = _state
 
-    fun loadRandomExperiences(limit: Int = 20) {
+    fun loadFeed(limit: Int = 20) {
         viewModelScope.launch {
-            val currentEmail = SessionManager.currentUser.value?.email.orEmpty()
-            val repo = ServiceLocator.provideExperiencesRepository()
-            val all = repo.getExperiences(limit = 50)
+            _state.value = _state.value.copy(loading = true, error = null)
 
-            val filtered = if (currentEmail.isNotBlank())
-                all.filter { (it.hostId ?: "") != currentEmail }   // hostId guarda el email del host
-            else
-                all
+            runCatching {
+                val emailLower = SessionManager.currentUser.value
+                    ?.email
+                    ?.trim()
+                    ?.lowercase()
+                    .orEmpty()
 
-            _items.value = filtered.shuffled().take(limit)
+                val exclude = if (emailLower.isNotBlank()) setOf(emailLower) else emptySet()
+
+                ServiceLocator.provideExperiencesRepository()
+                    .getRandomFeed(
+                        limit = limit,
+                        excludeHostIds = exclude,
+                        onlyActive = true
+                    )
+                    .map { it.toUi() }
+            }.onSuccess { uiList ->
+                _state.value = _state.value.copy(loading = false, items = uiList, error = null)
+            }.onFailure { e ->
+                _state.value = _state.value.copy(loading = false, error = e)
+            }
         }
     }
 }
+
+private fun ExperienceDtoMap.toUi(): Experience =
+    Experience(
+        title        = this.title,
+        rating       = this.avgRating,
+        department   = this.department,
+        reviewCount  = this.reviewsCount,
+        duration     = this.duration,
+        learnSkills  = this.skillsToLearn,
+        teachSkills  = this.skillsToTeach,
+        hostName     = this.hostName
+    )

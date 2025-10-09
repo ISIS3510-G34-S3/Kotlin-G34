@@ -11,4 +11,10 @@ interface ExperiencesRepository {
     suspend fun getNearest(lat: Double, lng: Double, topK: Int = 20): List<ExperienceDtoMap>
     suspend fun getExperiences(limit: Int? = null): List<ExperienceDtoMap>
 
+    suspend fun getRandomFeed(
+        limit: Int,
+        excludeHostIds: Set<String> = emptySet(),
+        onlyActive: Boolean = true
+    ): List<ExperienceDtoMap>
+
 }

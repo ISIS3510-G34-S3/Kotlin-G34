@@ -3,19 +3,14 @@ package com.example.kotlinview.ui.home
 import java.util.Date
 
 data class Experience(
-    val id: String,
     val title: String,
-    val hostName: String,
-    val location: String,
-    val verified: Boolean,
-    val rating: Double,
-    val reviewCount: Int,
-    val description: String,
-    val duration: String,
-    val activityType: String,
-    val skills: List<String>,
-    val teachingSkills: List<String>,
-    val learningSkills: List<String>,
-    val accessibility: Boolean,
-    val availableDates: List<Date>
+    val rating: Double = 0.0,
+    val department: String = "",
+    val reviewCount: Int = 0,
+    val duration: Int = 0,
+    val learnSkills: List<String> = emptyList(),
+    val teachSkills: List<String> = emptyList(),
+    val hostVerified: Boolean = false,
+    val hostName: String = "",
+    val imageUrl: String = ""
 )
