@@ -5,22 +5,31 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.google.android.material.chip.Chip
+import androidx.core.content.ContextCompat
+import androidx.core.util.Pair
 import com.example.kotlinview.R
 import com.example.kotlinview.databinding.BottomSheetFiltersBinding
-import androidx.core.content.ContextCompat
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.chip.Chip
+import com.google.android.material.datepicker.MaterialDatePicker
+import java.text.DateFormat
+import java.util.Date
 
 class FilterBottomSheet : BottomSheetDialogFragment() {
 
     var onApply: ((FilterOptions) -> Unit)? = null
     var onClear: (() -> Unit)? = null
 
+    private var _binding: BottomSheetFiltersBinding? = null
+    private val binding get() = _binding!!
+
+    // Chips “demo”
     private val activityTypes = listOf("Cooking", "Photography", "Sports", "Art", "Music", "Language")
     private val durations = listOf("1-2 hours", "3-4 hours", "5+ hours", "Full day")
 
-    private var _binding: BottomSheetFiltersBinding? = null
-    private val binding get() = _binding!!
+    // Estado de fechas (millis UTC)
+    private var selectedStartAtMs: Long? = null
+    private var selectedEndAtMs: Long? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = BottomSheetFiltersBinding.inflate(inflater, container, false)
@@ -28,14 +37,14 @@ class FilterBottomSheet : BottomSheetDialogFragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        // Campos de fecha por id (evita unresolved)
+        // Referencias a los EditText de fecha
         val etDateStart: EditText = view.findViewById(R.id.et_date_start)
         val etDateEnd: EditText   = view.findViewById(R.id.et_date_end)
 
         // Cerrar
         binding.btnClose.setOnClickListener { dismiss() }
 
-        // Estilos para chips (color por estado)
+        // Estilos para chips
         val bg = ContextCompat.getColorStateList(requireContext(), R.color.chip_bg_selector)
         val stroke = ContextCompat.getColorStateList(requireContext(), R.color.chip_stroke_selector)
         val text = ContextCompat.getColorStateList(requireContext(), R.color.chip_text_selector)
@@ -46,28 +55,24 @@ class FilterBottomSheet : BottomSheetDialogFragment() {
             chip.isClickable = true
             chip.isCheckedIconVisible = false
             chip.setEnsureMinTouchTargetSize(false)
-
             chip.chipBackgroundColor = bg
             chip.chipStrokeColor = stroke
             chip.chipStrokeWidth = strokeWidth
             chip.setTextColor(text)
-
-            // 🔒 fuerza el toggle incluso si algún estilo lo bloquea
             chip.setOnClickListener { chip.isChecked = !chip.isChecked }
         }
 
-        // Activity (multi)
+        // Chips Activity (multi)
         activityTypes.forEach { label ->
             val chip = Chip(requireContext(), null, com.google.android.material.R.style.Widget_Material3_Chip_Filter)
             chip.text = label
             stylize(chip)
             binding.chipsActivity.addView(chip)
         }
-        // Multi selección (default), no requerimos al menos uno
         binding.chipsActivity.isSingleSelection = false
         binding.chipsActivity.isSelectionRequired = false
 
-        // Duration (single)
+        // Chips Duration (single)
         durations.forEach { label ->
             val chip = Chip(requireContext(), null, com.google.android.material.R.style.Widget_Material3_Chip_Filter)
             chip.text = label
@@ -77,39 +82,81 @@ class FilterBottomSheet : BottomSheetDialogFragment() {
         binding.chipsDuration.isSingleSelection = true
         binding.chipsDuration.isSelectionRequired = false
 
+        // --------- Date Range Picker ----------
+        val dateFormatter = DateFormat.getDateInstance(DateFormat.MEDIUM)
+
+        fun openRangePicker() {
+            val builder = MaterialDatePicker.Builder.dateRangePicker()
+                .setTitleText(getString(R.string.filters_pick_dates))
+
+            // Restaurar selección previa si existe
+            val preStart = selectedStartAtMs
+            val preEnd = selectedEndAtMs
+            if (preStart != null && preEnd != null) {
+                builder.setSelection(Pair(preStart, preEnd))
+            }
+
+            val picker = builder.build()
+            picker.addOnPositiveButtonClickListener { range ->
+                selectedStartAtMs = range.first
+                selectedEndAtMs = range.second
+                etDateStart.setText(range.first?.let { dateFormatter.format(Date(it)) } ?: "")
+                etDateEnd.setText(range.second?.let { dateFormatter.format(Date(it)) } ?: "")
+            }
+            picker.show(parentFragmentManager, "date_range_picker")
+        }
+
+        // Abrir picker tocando cualquiera de los dos campos
+        etDateStart.setOnClickListener { openRangePicker() }
+        etDateEnd.setOnClickListener   { openRangePicker() }
+        // --------------------------------------
+
         // Clear
         binding.btnClear.setOnClickListener {
             binding.etLocation.setText("")
             binding.etSkills.setText("")
             binding.chipAccessibility.isChecked = false
-            etDateStart.setText("")
-            etDateEnd.setText("")
             binding.chipsActivity.clearCheck()
             binding.chipsDuration.clearCheck()
+            etDateStart.setText("")
+            etDateEnd.setText("")
+            selectedStartAtMs = null
+            selectedEndAtMs = null
             onClear?.invoke()
         }
 
-        // Apply
         binding.btnApply.setOnClickListener {
             val selectedActivities = binding.chipsActivity.checkedChipIds
-                .mapNotNull { binding.chipsActivity.findViewById<Chip>(it)?.text?.toString() }
+                .mapNotNull { id -> binding.chipsActivity.findViewById<Chip>(id)?.text?.toString() }
 
-            val selectedDuration = binding.chipsDuration.checkedChipId.let { id ->
+            val selectedDuration: String? = binding.chipsDuration.checkedChipId.let { id ->
                 if (id != View.NO_ID) binding.chipsDuration.findViewById<Chip>(id).text.toString() else null
             }
 
+            val locationNorm: String? =
+                binding.etLocation.text?.toString()?.trim().let { s ->
+                    if (s.isNullOrEmpty()) null else s
+                }
+
+            val skillsNorm: String? =
+                binding.etSkills.text?.toString()?.trim().let { s ->
+                    if (s.isNullOrEmpty()) null else s
+                }
+
             val result = FilterOptions(
-                location = binding.etLocation.text?.toString().orEmpty(),
                 activityTypes = selectedActivities,
                 duration = selectedDuration,
-                skillsQuery = binding.etSkills.text?.toString().orEmpty(),
+                location = locationNorm,
+                skillsQuery = skillsNorm,
                 accessibility = binding.chipAccessibility.isChecked,
-                dateStart = etDateStart.text?.toString(),
-                dateEnd = etDateEnd.text?.toString()
+                startAtMs = selectedStartAtMs,
+                endAtMs = selectedEndAtMs
             )
+
             onApply?.invoke(result)
             dismiss()
         }
+
     }
 
     override fun onDestroyView() {
@@ -121,3 +168,4 @@ class FilterBottomSheet : BottomSheetDialogFragment() {
         fun newInstance(): FilterBottomSheet = FilterBottomSheet()
     }
 }
+

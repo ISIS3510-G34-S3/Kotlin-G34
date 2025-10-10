@@ -8,4 +8,16 @@
     <string name="zoom_out_map">Zoom out</string>
     <string name="close_map">Close</string>
     <string name="login_cd_compass">App logo (compass)</string>
+    <string name="filters_pick_dates">Select dates</string>
+    <string name="filters_title">Filters</string>
+    <string name="close">Close</string>
+    <string name="filters_location_hint">Department</string>
+    <string name="filters_skills_hint">Skills (optional)</string>
+    <string name="filters_accessibility">Accessible</string>
+    <string name="filters_start_date">Start date</string>
+    <string name="filters_end_date">End date</string>
+    <string name="filters_activity_types">Activity Types</string>
+    <string name="filters_duration">Duration</string>
+    <string name="filters_clear">Clear</string>
+    <string name="filters_apply">Apply</string>
 </resources>

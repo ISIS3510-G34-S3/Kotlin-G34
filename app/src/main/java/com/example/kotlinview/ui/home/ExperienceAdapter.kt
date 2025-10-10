@@ -15,9 +15,11 @@ class ExperienceAdapter(
 ) : ListAdapter<Experience, ExperienceAdapter.VH>(Diff) {
 
     object Diff : DiffUtil.ItemCallback<Experience>() {
-        override fun areItemsTheSame(oldItem: Experience, newItem: Experience) =
-            oldItem.id == newItem.id
-        override fun areContentsTheSame(oldItem: Experience, newItem: Experience) =
+        // Evitamos 'id' porque tu modelo UI no lo tiene (o no es estable).
+        override fun areItemsTheSame(oldItem: Experience, newItem: Experience): Boolean =
+            oldItem == newItem
+
+        override fun areContentsTheSame(oldItem: Experience, newItem: Experience): Boolean =
             oldItem == newItem
     }
 
@@ -41,15 +43,30 @@ class ExperienceAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = getItem(position)
+
+        // Título y rating
         holder.title.text = item.title
         holder.rating.text = "%.1f".format(item.rating)
-        holder.host.text = item.hostName
-        holder.verified.visibility = if (item.verified) View.VISIBLE else View.GONE
-        holder.location.text = item.location
-        holder.learn.text = "Learn: " + item.learningSkills.joinToString(", ")
-        holder.teach.text = "Teach: " + item.teachingSkills.joinToString(", ")
+
+        // NO mostrar nombre ni check
+        holder.host.visibility = View.GONE
+        holder.verified.visibility = View.GONE
+
+        // Ubicación (usa tal cual viene del modelo)
+        holder.location.text = item.department
+
+        // Learn / Teach (listas no nulas en tu modelo)
+        val learnText = if (item.learnSkills.isEmpty()) "—"
+        else item.learnSkills.joinToString(", ")
+        holder.learn.text = "Learn: $learnText"
+
+        val teachText = if (item.teachSkills.isEmpty()) "—"
+        else item.teachSkills.joinToString(", ")
+        holder.teach.text = "Teach: $teachText"
+
+        // (n reviews) y duración (tal cual en tu modelo)
         holder.reviews.text = "(${item.reviewCount} reviews)"
-        holder.duration.text = item.duration
+        holder.duration.text = "${item.duration} days"
 
         holder.itemView.setOnClickListener { onClick(item) }
     }
