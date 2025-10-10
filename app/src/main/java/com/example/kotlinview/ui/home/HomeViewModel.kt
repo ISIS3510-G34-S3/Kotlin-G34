@@ -21,29 +21,41 @@ class HomeViewModel : ViewModel() {
     private val _state = MutableStateFlow(FeedUiState())
     val state: StateFlow<FeedUiState> = _state
 
-    fun loadFeed(limit: Int = 20) {
+    fun loadFeed(
+        limit: Int = 20,
+        department: String? = null,
+        startAtMs: Long? = null,
+        endAtMs: Long? = null
+    ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true, error = null)
-
             runCatching {
-                val emailLower = SessionManager.currentUser.value
-                    ?.email
-                    ?.trim()
-                    ?.lowercase()
-                    .orEmpty()
-
+                val emailLower = SessionManager.currentUser.value?.email?.trim()?.lowercase().orEmpty()
                 val exclude = if (emailLower.isNotBlank()) setOf(emailLower) else emptySet()
 
-                ServiceLocator.provideExperiencesRepository()
-                    .getRandomFeed(
+                val repo = ServiceLocator.provideExperiencesRepository()
+
+                if (department != null || (startAtMs != null && endAtMs != null)) {
+                    repo.getFilteredFeed(
+                        limit = limit,
+                        excludeHostEmails = exclude,
+                        department = department,
+                        startAtMs = startAtMs,
+                        endAtMs = endAtMs,
+                        onlyActive = true
+                    ).map { it.toUi() }
+                } else {
+                    repo.getRandomFeed(
                         limit = limit,
                         excludeHostIds = exclude,
                         onlyActive = true
-                    )
-                    .map { it.toUi() }
+                    ).map { it.toUi() }
+                }
             }.onSuccess { uiList ->
                 _state.value = _state.value.copy(loading = false, items = uiList, error = null)
             }.onFailure { e ->
+                // Log para depurar si vuelve a fallar
+                android.util.Log.e("Feed", "loadFeed error", e)
                 _state.value = _state.value.copy(loading = false, error = e)
             }
         }
@@ -61,3 +73,5 @@ private fun ExperienceDtoMap.toUi(): Experience =
         teachSkills  = this.skillsToTeach,
         hostName     = this.hostName
     )
+
+

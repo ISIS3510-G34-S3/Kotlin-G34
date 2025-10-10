@@ -12,6 +12,12 @@ import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
+import com.google.firebase.Timestamp
+import java.util.Date
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+
 
 // Helpers
 
@@ -27,6 +33,13 @@ private fun DocumentSnapshot.readHostEmail(): String {
     }
     return raw.substringAfterLast('/').trim().lowercase()
 }
+
+private fun Long.toTs(): Timestamp = Timestamp(Date(this))
+
+// overlap if (startA < endB) && (endA > startB)
+private fun overlap(aStart: Long, aEnd: Long, bStart: Long, bEnd: Long): Boolean =
+    aStart < bEnd && aEnd > bStart
+
 
 private fun DocumentSnapshot.toExperienceDtoMap(): ExperienceDtoMap {
     val geo: GeoPoint? = this.getGeoPoint("location")
@@ -108,11 +121,35 @@ private fun DocumentSnapshot.toExperienceDtoMap(): ExperienceDtoMap {
     )
 }
 
+private suspend fun isAvailableByBookings(
+    db: FirebaseFirestore,
+    expId: String,
+    startAtMs: Long,
+    endAtMs: Long
+): Boolean {
+    // 1 sola desigualdad en servidor (startsAt < endAt)
+    val q = db.collection("experiences").document(expId).collection("bookings")
+        .whereLessThan("startsAt", Timestamp(Date(endAtMs)))
+        // .whereEqualTo("status", "active") // si lo usas
+        .limit(25) // margen razonable; luego filtramos en cliente
+
+    val snap = q.get().await()
+    if (snap.isEmpty) return true
+
+    // Filtro de solapamiento en cliente (endsAt > startAt)
+    val anyOverlap = snap.documents.any { b ->
+        val s = (b.get("startsAt") as? Timestamp)?.toDate()?.time
+        val e = (b.get("endsAt") as? Timestamp)?.toDate()?.time
+        s != null && e != null && (s < endAtMs && e > startAtMs)
+    }
+    return !anyOverlap
+}
+
+
 class FirestoreExperiencesRepository(
     private val db: FirebaseFirestore
 ) : ExperiencesRepository {
 
-    // cache por id (String) del user doc
     private val hostNameCache = mutableMapOf<String, String?>()
 
     override suspend fun getNearest(lat: Double, lng: Double, topK: Int): List<ExperienceDtoMap> {
@@ -171,7 +208,7 @@ class FirestoreExperiencesRepository(
             .take(topK)
     }
 
-    // ********** CAMBIO: buscar nombre tomando DocumentReference **********
+
     private suspend fun fetchHostName(hostRef: DocumentReference): String? {
         val key = hostRef.id
         if (hostNameCache.containsKey(key)) return hostNameCache[key]
@@ -180,7 +217,7 @@ class FirestoreExperiencesRepository(
         hostNameCache[key] = name
         return name
     }
-    // ********************************************************************
+
 
     private fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val R = 6371.0
@@ -246,4 +283,54 @@ class FirestoreExperiencesRepository(
 
         return filtered.shuffled().take(limit)
     }
+
+    override suspend fun getFilteredFeed(
+        limit: Int,
+        excludeHostEmails: Set<String>,
+        department: String?,
+        startAtMs: Long?,
+        endAtMs: Long?,
+        onlyActive: Boolean
+    ): List<ExperienceDtoMap> {
+
+        // 1) Query base en servidor (department + isActive)
+        var q: Query = db.collection("experiences")
+        if (onlyActive) q = q.whereEqualTo("isActive", true)
+        if (!department.isNullOrBlank()) q = q.whereEqualTo("department", department.trim())
+
+        // Trae un pool generoso, luego filtramos por disponibilidad y autor
+        val poolSize = maxOf(limit * 5, 150)
+        q = q.limit(poolSize.toLong())
+
+        val snap = q.get().await()
+
+        // 2) Mapear a DTOs (y normalizar hostId como email para poder excluir)
+        val all = snap.documents.mapNotNull { doc ->
+            runCatching {
+                val dto = doc.toExperienceDtoMap()
+                dto.copy(hostId = doc.readHostEmail()) // garantiza email en hostId
+            }.getOrNull()
+        }
+
+        // 3) Excluir experiencias del usuario logueado (por email)
+        val exclude = excludeHostEmails.map { it.trim().lowercase() }.toSet()
+        val notMine = if (exclude.isEmpty()) all else all.filter { it.hostId !in exclude }
+
+        // 4) Filtro de disponibilidad (si hay rango)
+        val filtered = if (startAtMs != null && endAtMs != null && endAtMs > startAtMs) {
+            coroutineScope {
+                notMine.map { dto ->
+                    async {
+                        val ok = isAvailableByBookings(db, dto.id, startAtMs, endAtMs)
+                        if (ok) dto else null
+                    }
+                }.awaitAll().filterNotNull()
+            }
+        } else {
+            notMine
+        }
+
+        return filtered.shuffled().take(limit)
+    }
+
 }

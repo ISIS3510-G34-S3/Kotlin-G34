@@ -79,18 +79,20 @@ class HomeFragment : Fragment() {
         binding.btnFilters.setOnClickListener {
             val sheet = FilterBottomSheet.newInstance()
             sheet.onApply = { opts ->
-                Toast.makeText(
-                    requireContext(),
-                    "Applied: ${opts.activityTypes.joinToString()} / ${opts.duration ?: "-"} / ${opts.location}",
-                    Toast.LENGTH_SHORT
-                ).show()
-                // TODO: aplicar filtros reales en el ViewModel (cuando se implemente)
+                val dept = opts.location?.substringBefore(',')?.trim()
+                vm.loadFeed(
+                    limit = 20,
+                    department = if (dept.isNullOrBlank()) null else dept,
+                    startAtMs = opts.startAtMs,
+                    endAtMs = opts.endAtMs
+                )
             }
             sheet.onClear = {
-                Toast.makeText(requireContext(), "Cleared filters", Toast.LENGTH_SHORT).show()
+                vm.loadFeed(limit = 20) // sin filtros
             }
             sheet.show(childFragmentManager, "filters")
         }
+
 
         binding.btnMapView.setOnClickListener {
             Toast.makeText(requireContext(), "Map View (TODO)", Toast.LENGTH_SHORT).show()
