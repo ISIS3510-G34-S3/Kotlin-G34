@@ -22,7 +22,7 @@ class MapViewModelMap(
     private val _state = MutableStateFlow(MapUiStateMap())
     val state: StateFlow<MapUiStateMap> = _state
 
-    fun fetchNearest(lat: Double, lng: Double, topK: Int = 20) {
+    fun fetchNearest(lat: Double, lng: Double, topK: Int = 5) {
         _state.value = _state.value.copy(isLoading = true, error = null)
         viewModelScope.launch {
             try {
