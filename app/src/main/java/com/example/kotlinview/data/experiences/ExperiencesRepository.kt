@@ -12,7 +12,7 @@ interface ExperiencesRepository {
     suspend fun getNearest(
         lat: Double,
         lng: Double,
-        topK: Int = 20
+        topK: Int = 5
     ): List<ExperienceDtoMap>
 
     suspend fun getExperiences(

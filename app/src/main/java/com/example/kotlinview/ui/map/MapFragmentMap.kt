@@ -5,11 +5,11 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -28,6 +28,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
@@ -53,11 +54,16 @@ class MapFragmentMap : Fragment() {
     ) { granted ->
         val fine = granted[Manifest.permission.ACCESS_FINE_LOCATION] == true
         val coarse = granted[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (fine || coarse) enableMyLocationAndCenter()
-        else centerAndFetch(4.7110, -74.0721) // Bogotá fallback
+        if (fine || coarse) {
+            enableMyLocationAndCenter()
+        } else {
+            centerAndFetch(4.7110, -74.0721) // Bogotá fallback
+        }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentMapMapBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -68,19 +74,29 @@ class MapFragmentMap : Fragment() {
 
         osmdroidMap = binding.mapViewMap.apply {
             setTileSource(TileSourceFactory.MAPNIK)
-            setBuiltInZoomControls(false) // only our buttons
-            setMultiTouchControls(true)   // pan & pinch
+            setBuiltInZoomControls(false) // pinch to zoom only
+            setMultiTouchControls(true)
             controller.setZoom(12.0)
         }
 
-        // keep UI simple; prototypes hidden in XML already
         binding.toolbarMap.setNavigationOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
 
-        binding.btnZoomInMap.setOnClickListener { osmdroidMap?.controller?.zoomIn() }
-        binding.btnZoomOutMap.setOnClickListener { osmdroidMap?.controller?.zoomOut() }
-        binding.btnCloseInfoMap.setOnClickListener { hideInfo() }
+        // Go-to-my-location button
+        binding.btnMyLocationMap.setOnClickListener { goToMyLocation() }
+
+        // Tap anywhere on the map (not a marker) to close the info card
+        val tapToHideOverlay = object : Overlay() {
+            override fun onSingleTapConfirmed(e: MotionEvent, mapView: MapView?): Boolean {
+                if (binding.infoCardMap.isVisible) {
+                    hideInfo()
+                    return true
+                }
+                return false
+            }
+        }
+        binding.mapViewMap.overlays.add(0, tapToHideOverlay)
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModelMap.state.collectLatest { st ->
@@ -148,7 +164,7 @@ class MapFragmentMap : Fragment() {
                     binding.mapViewMap
                 ).apply {
                     enableMyLocation()
-                    enableFollowLocation()
+                    // don't auto-follow; we center manually on button press
                 }
                 binding.mapViewMap.overlays.add(myLocationOverlay)
                 binding.mapViewMap.invalidate()
@@ -158,7 +174,39 @@ class MapFragmentMap : Fragment() {
 
     private fun centerAndFetch(lat: Double, lng: Double) {
         osmdroidMap?.controller?.setCenter(GeoPoint(lat, lng))
-        viewModelMap.fetchNearest(lat, lng, 20)
+        // Keep top-5 nearest (your current choice)
+        viewModelMap.fetchNearest(lat, lng, 5)
+    }
+
+    // Smooth zoom + pan helper
+    private fun zoomAndCenter(point: GeoPoint, zoom: Double = 16.0) {
+        osmdroidMap?.controller?.apply {
+            setZoom(zoom)          // set desired zoom level first
+            animateTo(point)       // then animate the pan to the target
+        }
+        osmdroidMap?.invalidate()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun goToMyLocation() {
+        if (!hasLocationPermission()) {
+            ensureLocationPermissionThenLoad()
+            return
+        }
+        val fused = LocationServices.getFusedLocationProviderClient(requireContext())
+        fused.lastLocation
+            .addOnSuccessListener { loc ->
+                val point = if (loc != null) GeoPoint(loc.latitude, loc.longitude)
+                else myLocationOverlay?.myLocation ?: GeoPoint(4.7110, -74.0721)
+
+                // Zoom IN to the pin (not just pan)
+                zoomAndCenter(point, zoom = 16.0)
+            }
+            .addOnFailureListener {
+                val fallback = myLocationOverlay?.myLocation ?: GeoPoint(4.7110, -74.0721)
+                zoomAndCenter(fallback, zoom = 16.0)
+                Snackbar.make(requireView(), "Location unavailable", Snackbar.LENGTH_SHORT).show()
+            }
     }
 
     // ----- markers & selection -----
@@ -191,9 +239,7 @@ class MapFragmentMap : Fragment() {
 
             marker.position = point
             marker.title = dto.title ?: "Experience"
-            marker.icon = tintedPinDrawable(
-                if (dto.id == selectedId) R.color.british_racing_green else R.color.rufous
-            )
+            marker.icon = if (dto.id == selectedId) selectedPinDrawable() else defaultPinDrawable()
         }
 
         bringCardToFront()
@@ -207,17 +253,19 @@ class MapFragmentMap : Fragment() {
         binding.tvRatingMap.text = String.format("%.1f", dto.avgRating ?: 0.0)
         binding.tvLocationMap.text = dto.department ?: "Colombia"
 
-        // host + verification
         binding.tvHostMap.text = dto.hostName ?: "Host"
         binding.ivVerifiedMap.isVisible = dto.hostVerified == true
 
-        // skills
         val learn = if (dto.skillsToLearn.isNotEmpty()) dto.skillsToLearn.joinToString(", ") else "—"
         val teach = if (dto.skillsToTeach.isNotEmpty()) dto.skillsToTeach.joinToString(", ") else "—"
-        binding.tvLearnMap.text = "Learn: $learn"
-        binding.tvTeachMap.text = "Teach: $teach"
+        binding.tvLearnMap.text = learn
+        binding.tvTeachMap.text = teach
 
-        updateAllMarkerTints()
+        // Immediate visual update of marker icon
+        updateAllMarkerIcons()
+        osmdroidMap?.invalidate()
+        osmdroidMap?.postInvalidate()
+
         bringCardToFront()
         binding.infoCardMap.isGone = false
     }
@@ -225,22 +273,24 @@ class MapFragmentMap : Fragment() {
     private fun hideInfo() {
         selectedId = null
         binding.infoCardMap.isGone = true
-        updateAllMarkerTints()
+        updateAllMarkerIcons()
         osmdroidMap?.invalidate()
     }
 
-    private fun updateAllMarkerTints() {
+    private fun updateAllMarkerIcons() {
+        val map = osmdroidMap ?: return
         markersById.forEach { (id, marker) ->
-            marker.icon = tintedPinDrawable(
-                if (id == selectedId) R.color.british_racing_green else R.color.rufous
-            )
+            marker.icon = null
+            marker.icon = if (id == selectedId) selectedPinDrawable() else defaultPinDrawable()
         }
+        map.postInvalidate()
     }
 
-    private fun tintedPinDrawable(colorRes: Int) =
-        ContextCompat.getDrawable(requireContext(), R.drawable.ic_map_pin_map)?.mutate()?.also { d ->
-            DrawableCompat.setTint(d, requireContext().getColor(colorRes))
-        }
+    private fun defaultPinDrawable() =
+        ContextCompat.getDrawable(requireContext(), R.drawable.ic_map_pin_map)?.mutate()
+
+    private fun selectedPinDrawable() =
+        ContextCompat.getDrawable(requireContext(), R.drawable.ic_map_pin_map_selected)?.mutate()
 
     private fun bringCardToFront() {
         binding.infoCardMap.bringToFront()
@@ -250,7 +300,6 @@ class MapFragmentMap : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // Count feature usage (once per fragment instance)
         if (!hasLoggedUsage) {
             hasLoggedUsage = true
             ServiceLocator.incrementFeatureUsage("map_feature")
