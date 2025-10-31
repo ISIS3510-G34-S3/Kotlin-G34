@@ -16,22 +16,16 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Thumbnail -->
-        <FrameLayout
+        <!-- Thumbnail (reemplazado por ImageView real) -->
+        <ImageView
+            android:id="@+id/iv_photo"
             android:layout_width="match_parent"
             android:layout_height="144dp"
             android:layout_marginBottom="12dp"
+            android:scaleType="centerCrop"
             android:background="@drawable/bg_thumb_placeholder"
-            android:foreground="?attr/selectableItemBackground">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Experience Photo"
-                android:textColor="@color/ash_gray"
-                android:textSize="12sp"
-                android:layout_gravity="center"/>
-        </FrameLayout>
+            android:foreground="?attr/selectableItemBackground"
+            android:contentDescription="@null" />
 
         <!-- Title + Rating chip -->
         <LinearLayout
@@ -78,7 +72,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Host + verified -->
+        <!-- Host + verified (el icono sigue presente pero lo puedes ocultar desde el adapter) -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

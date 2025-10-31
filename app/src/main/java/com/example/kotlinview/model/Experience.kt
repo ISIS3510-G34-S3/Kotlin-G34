@@ -14,5 +14,6 @@ data class Experience(
     val skills: List<String>,
     val teachingSkills: List<String>,
     val learningSkills: List<String>,
-    val accessibility: Boolean
+    val accessibility: Boolean,
+    val imageUrl: String = ""
 )

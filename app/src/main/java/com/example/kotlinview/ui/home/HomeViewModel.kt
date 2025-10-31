@@ -71,7 +71,8 @@ private fun ExperienceDtoMap.toUi(): Experience =
         duration     = this.duration,
         learnSkills  = this.skillsToLearn,
         teachSkills  = this.skillsToTeach,
-        hostName     = this.hostName
+        hostName     = this.hostName,
+        imageUrl    = this.images.firstOrNull().orEmpty()
     )
 
 

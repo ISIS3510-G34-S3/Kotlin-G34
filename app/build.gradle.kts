@@ -73,4 +73,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation(libs.navigation.fragment.ktx)
     implementation(libs.navigation.ui.ktx)
+
+    //Image display
+    implementation("io.coil-kt:coil:2.6.0")
 }
