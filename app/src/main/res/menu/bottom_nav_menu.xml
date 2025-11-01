@@ -2,24 +2,18 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:id="@+id/homeFragment"
+        android:id="@+id/navigation_home"
         android:icon="@drawable/ic_home_black_24dp"
-        android:title="Home" />
+        android:title="@string/title_home" />
 
     <item
-        android:id="@+id/tab_map_map"
-        android:icon="@drawable/ic_map_pin"
-        android:title="Map" />
+        android:id="@+id/navigation_dashboard"
+        android:icon="@drawable/ic_dashboard_black_24dp"
+        android:title="@string/title_dashboard" />
 
     <item
-        android:id="@+id/createExperienceFragment"
-        android:icon="@drawable/ic_plus_24"
-        android:title="Create" />
-
-    <item
-        android:id="@+id/profileFragment"
-        android:icon="@drawable/ic_user_24"
-        android:title="Profile" />
+        android:id="@+id/navigation_notifications"
+        android:icon="@drawable/ic_notifications_black_24dp"
+        android:title="@string/title_notifications" />
 
 </menu>
-
