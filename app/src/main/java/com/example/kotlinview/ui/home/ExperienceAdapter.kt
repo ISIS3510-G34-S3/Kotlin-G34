@@ -64,7 +64,7 @@ class ExperienceAdapter(
             "Teach: —" else "Teach: ${item.teachSkills.joinToString(", ")}"
 
         holder.reviews.text = "(${item.reviewCount} reviews)"
-        holder.duration.text = item.duration.toString() // ajusta si tu duration es String
+        holder.duration.text = "${item.duration} days"
 
         holder.itemView.setOnClickListener { onClick(item) }
     }
