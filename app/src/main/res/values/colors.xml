@@ -1,10 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <!-- Template (requeridos por themes.xml) -->
+    <color name="purple_200">#BB86FC</color>
+    <color name="purple_500">#6200EE</color>
+    <color name="purple_700">#3700B3</color>
+    <color name="teal_200">#03DAC5</color>
+    <color name="teal_700">#018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Navbar -->
+    <color name="british_racing_green">#004225</color>
+    <color name="ash_gray">#B2BEB5</color>
+    <color name="nav_text_icon_active">#FFFFFFFF</color>
+
+    <!-- Paleta Home -->
+    <color name="rufous">#A4161A</color>
+    <color name="chocolate_cosmos">#58181F</color>
+    <color name="chocolate_cosmos_10">#1A58181F</color>
+    <color name="foreground">#111827</color>
+    <color name="muted_foreground">#6B7280</color>
+
+    <!-- ash_gray con opacidades -->
+    <color name="ash_gray_40">#66B2BEB5</color>
+    <color name="ash_gray_30">#4DB2BEB5</color>
+    <color name="ash_gray_20">#33B2BEB5</color>
+    <color name="ash_gray_10">#1AB2BEB5</color>
+
+    <!-- amarillos para el rating -->
+    <color name="yellow_50">#FFFBEB</color>
+    <color name="yellow_700">#B45309</color>
+
+    <!-- colores para filters -->
+    <color name="rufous_10">#1AA4161A</color>
+
+    <color name="gray_300">#E0E0E0</color>
+    <color name="gray_600">#757575</color>
+    <color name="gray_500">#9E9E9E</color>
+    <color name="red_600">#D32F2F</color>
+    <color name="gray_50">#F7F7F8</color>
+
+
+    <!-- Semantic -->
+    <color name="text_primary">#1A1A1A</color>
+    <color name="text_secondary">#6C757D</color>
+    <color name="muted_bg">#F8F9FA</color>
+
+    <!-- Rating chip yellows -->
+    <color name="yellow_500">#F59E0B</color>
+
 </resources>

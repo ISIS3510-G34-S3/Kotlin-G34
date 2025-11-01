@@ -2,13 +2,19 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/navigation_home">
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginFragment">
+
+<fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.kotlinview.ui.auth.LoginFragment"
+        android:label="Login"
+        tools:layout="@layout/fragment_login" />
 
     <fragment
-        android:id="@+id/navigation_home"
+        android:id="@+id/homeFragment"
         android:name="com.example.kotlinview.ui.home.HomeFragment"
-        android:label="@string/title_home"
+        android:label="Home"
         tools:layout="@layout/fragment_home" />
 
     <fragment
@@ -18,8 +24,22 @@
         tools:layout="@layout/fragment_dashboard" />
 
     <fragment
-        android:id="@+id/navigation_notifications"
-        android:name="com.example.kotlinview.ui.notifications.NotificationsFragment"
-        android:label="@string/title_notifications"
-        tools:layout="@layout/fragment_notifications" />
+        android:id="@+id/profileFragment"
+        android:name="com.example.kotlinview.ui.profile.ProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/fragment_profile" />
+
+    <fragment
+        android:id="@+id/createExperienceFragment"
+        android:name="com.example.kotlinview.ui.create.CreateExperienceFragment"
+        android:label="Create"
+        tools:layout="@layout/fragment_create_experience" />
+
+    <fragment
+        android:id="@+id/navigation_map_map"
+        android:name="com.example.kotlinview.ui.map.MapFragmentMap"
+        android:label="Map"
+        tools:layout="@layout/fragment_map_map" />
+
 </navigation>
+

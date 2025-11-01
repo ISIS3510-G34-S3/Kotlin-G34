@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/british_racing_green"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <!-- Borde superior (border-t) color ash_gray -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/ash_gray"/>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav_preview"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        style="@style/Widget.MyApp.BottomNav"
+        app:menu="@menu/bottom_nav_menu"
+        app:itemIconTint="@color/nav_item_tint"
+        app:itemTextColor="@color/nav_item_tint"
+        android:background="@android:color/transparent"
+        app:backgroundTint="@android:color/transparent"
+        app:labelVisibilityMode="labeled"/>
+
+</LinearLayout>
