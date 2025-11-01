@@ -1,5 +1,6 @@
 package com.example.kotlinview.core
 
+import android.content.Context
 import android.util.Log
 import com.example.kotlinview.data.experiences.ExperiencesRepository
 import com.example.kotlinview.data.experiences.FirestoreExperiencesRepository
@@ -20,6 +21,13 @@ import com.example.kotlinview.model.User
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+// --- Local storage (added) ---
+import com.example.kotlinview.data.local.ExperienceLocalStore
+import com.example.kotlinview.data.local.ExperienceLocalStoreImpl
+import com.example.kotlinview.data.local.api.ExperienceLocalApi
+import com.example.kotlinview.data.local.api.ExperienceLocalApiImpl
+import com.tencent.mmkv.MMKV
+
 /**
  * Super-lightweight DI for the app.
  *
@@ -32,6 +40,17 @@ object ServiceLocator {
 
     private const val TAG = "ServiceLocator"
 
+    // --- App context holder (added) ---
+    @Volatile private var appCtx: Context? = null
+
+    fun init(context: Context) {
+        if (appCtx == null) {
+            val app = context.applicationContext   // non-null
+            appCtx = app
+            MMKV.initialize(app)                   // ✅ no type mismatch
+        }
+    }
+
     // Singleton Firestore
     private var firestoreInstance: FirebaseFirestore? = null
     fun provideFirestore(): FirebaseFirestore {
@@ -39,7 +58,6 @@ object ServiceLocator {
         if (existing != null) return existing
 
         val db = FirebaseFirestore.getInstance()
-
         firestoreInstance = db
         return db
     }
@@ -79,9 +97,7 @@ object ServiceLocator {
     }
 
     private var authInstance: FirebaseAuth? = null
-
     private var authRepoInstance: AuthRepository? = null
-
     private var userRepoInstance: UserRepository? = null
 
     @Volatile private var _overrideRepo: ExperiencesRepository? = null
@@ -177,5 +193,23 @@ object ServiceLocator {
         val user = repo.getByEmail(email)
         SessionManager.setUser(user)
         return@withContext user
+    }
+
+    // --- Local store singleton (Room + Files) ---
+    @Volatile private var experienceLocalStore: ExperienceLocalStore? = null
+    fun provideExperienceLocalStore(context: Context): ExperienceLocalStore {
+        val ctx = appCtx ?: context.applicationContext
+        return experienceLocalStore ?: synchronized(this) {
+            experienceLocalStore ?: ExperienceLocalStoreImpl(ctx).also { experienceLocalStore = it }
+        }
+    }
+
+    // --- Black-box API singleton for catalogue teammates ---
+    @Volatile private var experienceLocalApi: ExperienceLocalApi? = null
+    fun provideExperienceLocalApi(context: Context): ExperienceLocalApi {
+        val ctx = appCtx ?: context.applicationContext
+        return experienceLocalApi ?: synchronized(this) {
+            experienceLocalApi ?: ExperienceLocalApiImpl(ctx).also { experienceLocalApi = it }
+        }
     }
 }

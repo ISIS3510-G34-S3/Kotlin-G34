@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("org.jetbrains.kotlin.kapt")
     id("com.google.gms.google-services")
 }
 
@@ -26,6 +27,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -62,7 +64,7 @@ dependencies {
     // Material (explicit)
     implementation("com.google.android.material:material:1.12.0")
 
-    // Map + device location (needed for the functional map)
+    // Map + device location
     implementation("org.osmdroid:osmdroid-android:6.1.18")
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
@@ -71,9 +73,19 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
     implementation("com.google.firebase:firebase-auth-ktx")
-    implementation(libs.navigation.fragment.ktx)
-    implementation(libs.navigation.ui.ktx)
 
-    //Image display
+    // Image loading
     implementation("io.coil-kt:coil:2.6.0")
+
+    // ===== Local Storage Strategy additions =====
+
+    // Room (SQLite SSOT)
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+
+    // DataStore (Preferences) for policy/metadata
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    implementation("com.tencent:mmkv:1.3.7")
 }

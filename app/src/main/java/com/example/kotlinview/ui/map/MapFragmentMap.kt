@@ -3,6 +3,7 @@ package com.example.kotlinview.ui.map
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -16,13 +17,22 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.example.kotlinview.R
+import com.example.kotlinview.core.NetworkMonitor
 import com.example.kotlinview.core.ServiceLocator
+import com.example.kotlinview.data.local.ExperienceLocalStore
 import com.example.kotlinview.data.map.ExperienceDtoMap
 import com.example.kotlinview.databinding.FragmentMapMapBinding
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -31,6 +41,10 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class MapFragmentMap : Fragment() {
 
@@ -46,8 +60,28 @@ class MapFragmentMap : Fragment() {
     private var selectedId: String? = null
     private val markersById = mutableMapOf<String, Marker>()
 
+    // Local store (Room + MMKV + DataStore)
+    private lateinit var localStore: ExperienceLocalStore
+
     // Log usage once per fragment lifecycle
     private var hasLoggedUsage = false
+
+    // Offline dialog guard
+    private var hasShownOfflineDialog = false
+    private val OFFLINE_MSG =
+        "There is no internet connection. Please try again when the connection is restored."
+
+    // --- Auto-move refresh (policy-controlled via DataStore) ---
+    private var moveCallback: LocationCallback? = null
+    private var lastRefreshLat: Double? = null
+    private var lastRefreshLng: Double? = null
+    private var lastRefreshAtMs: Long = 0L
+
+    // Policy knobs loaded from DataStore (with safe defaults)
+    private var policyLoaded = false
+    private var policyAutoRefreshEnabled: Boolean = true
+    private var policyMoveDistanceM: Double = 250.0
+    private var policyMinRefreshIntervalMs: Long = 10_000L
 
     private val requestLocationPerms = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -69,12 +103,30 @@ class MapFragmentMap : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        // Ensure ServiceLocator has context (once per process is fine)
+        ServiceLocator.init(requireContext().applicationContext)
+        localStore = ServiceLocator.provideExperienceLocalStore(requireContext())
+
+        // Load policy from DataStore (non-blocking)
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { localStore.readPolicyMeta() }
+                .onSuccess { meta ->
+                    policyLoaded = true
+                    policyAutoRefreshEnabled = meta.autoRefreshEnabled
+                    policyMoveDistanceM = meta.moveDistanceM
+                    policyMinRefreshIntervalMs = meta.refreshMinIntervalMs
+                }
+                .onFailure {
+                    policyLoaded = true // keep defaults
+                }
+        }
+
         // OSMDroid init
         Configuration.getInstance().userAgentValue = requireContext().packageName
 
         osmdroidMap = binding.mapViewMap.apply {
             setTileSource(TileSourceFactory.MAPNIK)
-            setBuiltInZoomControls(false) // pinch to zoom only
+            setBuiltInZoomControls(false)
             setMultiTouchControls(true)
             controller.setZoom(12.0)
         }
@@ -103,10 +155,7 @@ class MapFragmentMap : Fragment() {
                 binding.progressMap.isVisible = st.isLoading
                 renderMarkers(st.items)
                 if (selectedId != null && st.items.none { it.id == selectedId }) hideInfo()
-                st.error?.let { msg ->
-                    Snackbar.make(requireView(), msg, Snackbar.LENGTH_LONG).show()
-                    viewModelMap.clearError()
-                }
+                st.error?.let { msg -> showError(msg) }
             }
         }
 
@@ -117,8 +166,14 @@ class MapFragmentMap : Fragment() {
 
     private fun hasLocationPermission(): Boolean {
         val ctx = requireContext()
-        val fine = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val coarse = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val fine = ContextCompat.checkSelfPermission(
+            ctx,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(
+            ctx,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
         return fine || coarse
     }
 
@@ -164,7 +219,6 @@ class MapFragmentMap : Fragment() {
                     binding.mapViewMap
                 ).apply {
                     enableMyLocation()
-                    // don't auto-follow; we center manually on button press
                 }
                 binding.mapViewMap.overlays.add(myLocationOverlay)
                 binding.mapViewMap.invalidate()
@@ -173,18 +227,46 @@ class MapFragmentMap : Fragment() {
     }
 
     private fun centerAndFetch(lat: Double, lng: Double) {
+        // Seed movement anchors
+        lastRefreshLat = lat
+        lastRefreshLng = lng
+        lastRefreshAtMs = System.currentTimeMillis()
+
+        // Persist anchors to DataStore (best-effort)
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            runCatching {
+                localStore.updatePolicyMeta { m ->
+                    m.copy(
+                        lastNearestRefreshMs = System.currentTimeMillis(),
+                        lastLocationLat = lat,
+                        lastLocationLng = lng
+                    )
+                }
+            }
+        }
+
+        // Nudge user marker (overlay) and recenter map
+        nudgeUserMarker()
         osmdroidMap?.controller?.setCenter(GeoPoint(lat, lng))
-        // Keep top-5 nearest (your current choice)
-        viewModelMap.fetchNearest(lat, lng, 5)
+
+        // Policy-aware fetch
+        loadNearestPolicyAware(lat, lng, topK = 5)
+    }
+
+    private fun nudgeUserMarker() {
+        myLocationOverlay?.apply {
+            if (!isMyLocationEnabled) enableMyLocation()
+        }
+        osmdroidMap?.invalidate()
     }
 
     // Smooth zoom + pan helper
     private fun zoomAndCenter(point: GeoPoint, zoom: Double = 16.0) {
         osmdroidMap?.controller?.apply {
-            setZoom(zoom)          // set desired zoom level first
-            animateTo(point)       // then animate the pan to the target
+            setZoom(zoom)
+            animateTo(point)
         }
-        osmdroidMap?.invalidate()
+        nudgeUserMarker()
     }
 
     @SuppressLint("MissingPermission")
@@ -198,8 +280,6 @@ class MapFragmentMap : Fragment() {
             .addOnSuccessListener { loc ->
                 val point = if (loc != null) GeoPoint(loc.latitude, loc.longitude)
                 else myLocationOverlay?.myLocation ?: GeoPoint(4.7110, -74.0721)
-
-                // Zoom IN to the pin (not just pan)
                 zoomAndCenter(point, zoom = 16.0)
             }
             .addOnFailureListener {
@@ -209,12 +289,218 @@ class MapFragmentMap : Fragment() {
             }
     }
 
+    // ----- policy-aware nearest (online/offline) -----
+
+    private fun bucketKeyFor(lat: Double, lng: Double): String =
+        "${"%.2f".format(lat)}_${"%.2f".format(lng)}"
+
+    private fun loadNearestPolicyAware(lat: Double, lng: Double, topK: Int) {
+        val ctx = requireContext()
+        val repo = ServiceLocator.experiencesRepository
+        val local = localStore
+        val localSync = MapLocalSync(local)
+
+        viewModelMap.setLoading(true)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val online = NetworkMonitor.isOnline(ctx)
+            if (online) {
+                // ONLINE: remote → show → persist (Room + KV bucket + DataStore anchors)
+                runCatching {
+                    val list = withContext(Dispatchers.IO) { repo.getNearest(lat, lng, topK) }
+                    viewModelMap.setItems(list)
+                    launch(Dispatchers.IO) {
+                        localSync.persistFromRemote(
+                            items = list,
+                            currentLat = lat,
+                            currentLng = lng
+                        )
+                        local.updatePolicyMeta { m ->
+                            m.copy(
+                                lastNearestRefreshMs = System.currentTimeMillis(),
+                                lastLocationLat = lat,
+                                lastLocationLng = lng
+                            )
+                        }
+                    }
+                }.onFailure { e ->
+                    tryLocalFallback(local, lat, lng, topK, "Remote fetch failed: ${e.message}")
+                }
+            } else {
+                // OFFLINE: bucket → Room; else nearest from Room; else dialog
+                tryLocalFallback(local, lat, lng, topK, OFFLINE_MSG)
+            }
+        }
+    }
+
+    private suspend fun tryLocalFallback(
+        local: ExperienceLocalStore,
+        lat: Double,
+        lng: Double,
+        topK: Int,
+        @Suppress("UNUSED_PARAMETER") message: String
+    ) {
+        val bKey = bucketKeyFor(lat, lng)
+        val ids = runCatching { local.getBucketTopIds(bKey) }.getOrDefault(emptyList())
+
+        val fromBucket = if (ids.isNotEmpty()) {
+            runCatching { local.getByIds(ids).take(topK) }.getOrDefault(emptyList())
+        } else emptyList()
+
+        if (fromBucket.isNotEmpty()) {
+            viewModelMap.setItems(fromBucket)
+            return
+        }
+
+        val fromRoomNearest = runCatching { local.getNearest(lat, lng, topK) }.getOrDefault(emptyList())
+        if (fromRoomNearest.isNotEmpty()) {
+            viewModelMap.setItems(fromRoomNearest)
+            return
+        }
+
+        viewModelMap.setItems(emptyList())
+        viewModelMap.setError(OFFLINE_MSG)
+    }
+
+    // ----- error UI -----
+
+    private fun showError(msg: String) {
+        if (msg == OFFLINE_MSG) {
+            if (!hasShownOfflineDialog && isAdded) {
+                hasShownOfflineDialog = true
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("No connection")
+                    .setMessage(OFFLINE_MSG)
+                    .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
+                    .setOnDismissListener { viewModelMap.clearError() }
+                    .show()
+            } else {
+                viewModelMap.clearError()
+            }
+        } else {
+            Snackbar.make(requireView(), msg, Snackbar.LENGTH_LONG).show()
+            viewModelMap.clearError()
+        }
+    }
+
+    // ----- movement-based auto refresh (now: online OR offline) -----
+
+    private fun distanceMeters(aLat: Double, aLng: Double, bLat: Double, bLng: Double): Double {
+        val R = 6371000.0
+        val dLat = Math.toRadians(bLat - aLat)
+        val dLng = Math.toRadians(bLng - aLng)
+        val sa = sin(dLat / 2) * sin(dLat / 2) +
+                cos(Math.toRadians(aLat)) *
+                cos(Math.toRadians(bLat)) *
+                sin(dLng / 2) * sin(dLng / 2)
+        val c = 2 * atan2(sqrt(sa), sqrt(1 - sa))
+        return R * c
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startMoveUpdates() {
+        if (!policyAutoRefreshEnabled) return
+        if (!hasLocationPermission()) return
+
+        val req = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 5000L)
+            .setMinUpdateIntervalMillis(3000L)
+            .setMinUpdateDistanceMeters(0f)
+            .build()
+
+        if (moveCallback == null) {
+            moveCallback = object : LocationCallback() {
+                override fun onLocationResult(result: LocationResult) {
+                    val loc: Location = result.lastLocation ?: return
+                    val now = System.currentTimeMillis()
+
+                    // always keep the user marker fresh
+                    nudgeUserMarker()
+
+                    // Guard: min time interval
+                    if (now - lastRefreshAtMs < policyMinRefreshIntervalMs) return
+
+                    val lastLat = lastRefreshLat
+                    val lastLng = lastRefreshLng
+
+                    // First time: seed anchors and persist, do nothing else (initial fetch already ran)
+                    if (lastLat == null || lastLng == null) {
+                        lastRefreshLat = loc.latitude
+                        lastRefreshLng = loc.longitude
+                        lastRefreshAtMs = now
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                            runCatching {
+                                localStore.updatePolicyMeta { m ->
+                                    m.copy(
+                                        lastNearestRefreshMs = now,
+                                        lastLocationLat = loc.latitude,
+                                        lastLocationLng = loc.longitude
+                                    )
+                                }
+                            }
+                        }
+                        return
+                    }
+
+                    // Distance guard
+                    val d = distanceMeters(lastLat, lastLng, loc.latitude, loc.longitude)
+                    if (d < policyMoveDistanceM) return
+
+                    // Update anchors BEFORE fetch
+                    lastRefreshLat = loc.latitude
+                    lastRefreshLng = loc.longitude
+                    lastRefreshAtMs = now
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                        runCatching {
+                            localStore.updatePolicyMeta { m ->
+                                m.copy(
+                                    lastNearestRefreshMs = now,
+                                    lastLocationLat = loc.latitude,
+                                    lastLocationLng = loc.longitude
+                                )
+                            }
+                        }
+                    }
+
+                    // Branch by connectivity:
+                    if (NetworkMonitor.isOnline(requireContext())) {
+                        // Online: remote + persist (center map softly)
+                        osmdroidMap?.controller?.setCenter(GeoPoint(loc.latitude, loc.longitude))
+                        loadNearestPolicyAware(loc.latitude, loc.longitude, topK = 5)
+                    } else {
+                        // Offline: recompute locally from Room automatically
+                        osmdroidMap?.controller?.setCenter(GeoPoint(loc.latitude, loc.longitude))
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            val localNearest = withContext(Dispatchers.IO) {
+                                localStore.getNearest(loc.latitude, loc.longitude, 5)
+                            }
+                            viewModelMap.setItems(localNearest)
+                        }
+                    }
+                }
+            }
+        }
+
+        try {
+            val fused = LocationServices.getFusedLocationProviderClient(requireContext())
+            fused.requestLocationUpdates(req, moveCallback!!, requireActivity().mainLooper)
+        } catch (_: SecurityException) {
+            // Permission missing at runtime → ignore
+        }
+    }
+
+    private fun stopMoveUpdates() {
+        moveCallback?.let {
+            val fused = LocationServices.getFusedLocationProviderClient(requireContext())
+            fused.removeLocationUpdates(it)
+        }
+    }
+
     // ----- markers & selection -----
 
     private fun renderMarkers(items: List<ExperienceDtoMap>) {
         val map = osmdroidMap ?: return
 
-        val keepIds = items.map { it.id }.toSet()
+        val keepIds = items.mapNotNull { it.id }.toSet()
         val toRemove = markersById.keys - keepIds
         toRemove.forEach { id ->
             markersById[id]?.let { map.overlays.remove(it) }
@@ -222,11 +508,12 @@ class MapFragmentMap : Fragment() {
         }
 
         items.forEach { dto ->
+            val id = dto.id ?: return@forEach
             val lat = dto.latitude ?: return@forEach
             val lng = dto.longitude ?: return@forEach
             val point = GeoPoint(lat, lng)
 
-            val existing = markersById[dto.id]
+            val existing = markersById[id]
             val marker = existing ?: Marker(map).also { m ->
                 m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 m.setOnMarkerClickListener { _, _ ->
@@ -234,12 +521,12 @@ class MapFragmentMap : Fragment() {
                     true
                 }
                 map.overlays.add(m)
-                markersById[dto.id] = m
+                markersById[id] = m
             }
 
             marker.position = point
             marker.title = dto.title ?: "Experience"
-            marker.icon = if (dto.id == selectedId) selectedPinDrawable() else defaultPinDrawable()
+            marker.icon = if (id == selectedId) selectedPinDrawable() else defaultPinDrawable()
         }
 
         bringCardToFront()
@@ -261,7 +548,6 @@ class MapFragmentMap : Fragment() {
         binding.tvLearnMap.text = learn
         binding.tvTeachMap.text = teach
 
-        // Immediate visual update of marker icon
         updateAllMarkerIcons()
         osmdroidMap?.invalidate()
         osmdroidMap?.postInvalidate()
@@ -305,10 +591,24 @@ class MapFragmentMap : Fragment() {
             ServiceLocator.incrementFeatureUsage("map_feature")
         }
         binding.mapViewMap.onResume()
+        // Start movement updates once policy is loaded
+        if (policyLoaded) startMoveUpdates() else {
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                var spins = 0
+                while (!policyLoaded && spins < 10) {
+                    kotlinx.coroutines.delay(50)
+                    spins++
+                }
+                withContext(Dispatchers.Main) { startMoveUpdates() }
+            }
+        }
+        // keep user marker live after returning
+        nudgeUserMarker()
     }
 
     override fun onPause() {
         super.onPause()
+        stopMoveUpdates()
         binding.mapViewMap.onPause()
     }
 
@@ -318,5 +618,7 @@ class MapFragmentMap : Fragment() {
         osmdroidMap = null
         myLocationOverlay = null
         markersById.clear()
+        hasShownOfflineDialog = false
+        moveCallback = null
     }
 }

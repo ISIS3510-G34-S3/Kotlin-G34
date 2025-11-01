@@ -34,6 +34,19 @@ class MapViewModelMap(
         }
     }
 
+    // --- Helpers for fragment-driven (policy-aware) flow ---
+    fun setLoading(loading: Boolean) {
+        _state.value = _state.value.copy(isLoading = loading)
+    }
+
+    fun setItems(items: List<ExperienceDtoMap>) {
+        _state.value = _state.value.copy(isLoading = false, error = null, items = items)
+    }
+
+    fun setError(message: String) {
+        _state.value = _state.value.copy(isLoading = false, error = message)
+    }
+
     fun clearError() {
         _state.value = _state.value.copy(error = null)
     }
