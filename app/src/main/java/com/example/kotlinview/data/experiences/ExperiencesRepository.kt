@@ -33,4 +33,14 @@ interface ExperiencesRepository {
         endAtMs: Long?,
         onlyActive: Boolean = true
     ): List<ExperienceDtoMap>
+
+    /**
+     * Returns the average rating for reviews in the subcollection
+     * experiences/{experienceId}/reviews during [sinceMs, now].
+     * If there are no reviews in that window, returns null.
+     */
+    suspend fun getRecentAverageRating(
+        experienceId: String,
+        sinceMs: Long
+    ): Double?
 }

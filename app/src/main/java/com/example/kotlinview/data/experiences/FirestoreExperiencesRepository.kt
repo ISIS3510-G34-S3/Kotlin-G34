@@ -314,4 +314,43 @@ class FirestoreExperiencesRepository(
 
         return filtered.shuffled().take(limit)
     }
+
+    override suspend fun getRecentAverageRating(experienceId: String, sinceMs: Long): Double? {
+        val cutoff = com.google.firebase.Timestamp(java.util.Date(sinceMs))
+        // Leemos hasta 200 reviews y filtramos client-side por timestamp para evitar depender de nombres exactos
+        val ref = db.collection("experiences")
+            .document(experienceId)
+            .collection("reviews")
+        val snap = ref.limit(200).get().await()
+
+        if (snap.isEmpty) return null
+
+        var sum = 0.0
+        var count = 0
+
+        for (doc in snap.documents) {
+            // rating puede venir como Double/Number
+            val rating: Double? =
+                doc.getDouble("rating")
+                    ?: (doc.get("rating") as? Number)?.toDouble()
+
+            if (rating == null) continue
+
+            // Intentamos varios nombres comunes de timestamp
+            val ts =
+                (doc.get("createdAt") as? com.google.firebase.Timestamp)
+                    ?: (doc.get("timestamp") as? com.google.firebase.Timestamp)
+                    ?: (doc.get("updatedAt") as? com.google.firebase.Timestamp)
+                    ?: (doc.get("date") as? com.google.firebase.Timestamp)
+
+            // Solo contamos si hay timestamp y está dentro de la ventana
+            if (ts != null && ts.seconds >= cutoff.seconds) {
+                sum += rating
+                count += 1
+            }
+        }
+
+        return if (count > 0) sum / count else null
+    }
+
 }
