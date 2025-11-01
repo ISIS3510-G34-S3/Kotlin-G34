@@ -52,7 +52,9 @@ class ExperienceAdapter(
         }
 
         holder.title.text = item.title
-        holder.rating.text = String.format("%.1f", item.rating)
+
+        // ⭐ Cambio: mostrar "N/A" si el rating es NaN; si no, formatear con 1 decimal
+        holder.rating.text = if (item.rating.isNaN()) "N/A" else String.format("%.1f", item.rating)
 
         // Ubicación: usamos department
         holder.location.text = item.department
