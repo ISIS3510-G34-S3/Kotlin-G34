@@ -17,6 +17,10 @@ import java.util.Date
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import com.google.firebase.FirebaseNetworkException
+import java.io.IOException
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 
 // Helpers
 
@@ -240,7 +244,6 @@ class FirestoreExperiencesRepository(
 
         val poolSize = maxOf(limit * 5, 100)
 
-        // Normaliza el email a excluir (1 usuario)
         val excludeEmail = excludeHostIds.firstOrNull()?.trim()?.lowercase().orEmpty()
 
         var q: Query = db.collection("experiences")
@@ -314,6 +317,77 @@ class FirestoreExperiencesRepository(
 
         return filtered.shuffled().take(limit)
     }
+
+    override suspend fun createBooking(
+        experienceId: String,
+        travelerEmail: String,
+        startAtMs: Long,
+        endAtMs: Long,
+        peopleCount: Int,
+        amountCOP: Long
+    ): BookingResult {
+        return try {
+            // ⏱️ Timeout
+            withTimeout(8_000L) {
+                val expRef = db.collection("experiences").document(experienceId)
+                val expSnap = expRef.get().await()
+
+                if (!expSnap.exists()) {
+                    return@withTimeout BookingResult.Failure(BookingError.UNKNOWN)
+                }
+
+                // groupSizeMax
+                val maxGroupSize: Int =
+                    (expSnap.getLong("groupSizeMax")
+                        ?: (expSnap.get("groupSizeMax") as? Number)?.toLong()
+                        ?: Long.MAX_VALUE
+                            ).toInt()
+
+                if (peopleCount > maxGroupSize) {
+                    return@withTimeout BookingResult.Failure(BookingError.OVER_GROUP_SIZE)
+                }
+
+                val available = isAvailableByBookings(
+                    db = db,
+                    expId = experienceId,
+                    startAtMs = startAtMs,
+                    endAtMs = endAtMs
+                )
+
+                if (!available) {
+                    return@withTimeout BookingResult.Failure(BookingError.DATES_NOT_AVAILABLE)
+                }
+
+                val travelerPath = "/users/$travelerEmail"
+
+                val data = hashMapOf(
+                    "amountCOP"    to amountCOP,
+                    "createdAt"    to com.google.firebase.Timestamp.now(),
+                    "startsAt"     to com.google.firebase.Timestamp(java.util.Date(startAtMs)),
+                    "endsAt"       to com.google.firebase.Timestamp(java.util.Date(endAtMs)),
+                    "experienceId" to experienceId,
+                    "peopleCount"  to peopleCount,
+                    "status"       to "active",
+                    "travelerID"   to travelerPath
+                )
+
+                expRef.collection("bookings").add(data).await()
+
+                BookingResult.Success
+            }
+        } catch (e: FirebaseNetworkException) {
+            BookingResult.Failure(BookingError.NETWORK)
+        } catch (e: IOException) {
+            BookingResult.Failure(BookingError.NETWORK)
+        } catch (e: TimeoutCancellationException) {
+            // 🔌 Si Firestore se queda colgado por no tener red, entramos aquí
+            BookingResult.Failure(BookingError.NETWORK)
+        } catch (e: Exception) {
+            BookingResult.Failure(BookingError.UNKNOWN)
+        }
+    }
+
+
 
     override suspend fun getRecentAverageRating(experienceId: String, sinceMs: Long): Double? {
         val cutoff = com.google.firebase.Timestamp(java.util.Date(sinceMs))
