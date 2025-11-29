@@ -13,6 +13,11 @@ import com.google.android.material.datepicker.MaterialDatePicker
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import android.widget.Toast
 
 class BookExperienceFragment : Fragment() {
 
@@ -31,7 +36,12 @@ class BookExperienceFragment : Fragment() {
     private var endDateMs: Long? = null
     private var guestCount: Int = 1
 
+    private val vm: BookExperienceViewModel by viewModels()
+
+    private var isSaving: Boolean = false
+
     private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
     private val currencyFormatter: NumberFormat =
         NumberFormat.getCurrencyInstance(Locale("es", "CO"))
 
@@ -67,6 +77,25 @@ class BookExperienceFragment : Fragment() {
         setupGuestSelection()
         setupConfirmButton()
 
+        viewLifecycleOwner.lifecycleScope.launch {
+            vm.state.collectLatest { st ->
+                isSaving = st.saving
+
+                // Deshabilitamos el botón durante el guardado
+                updateUi()  // para recalcular canConfirm con isSaving
+
+                st.errorMessage?.let { msg ->
+                    Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                }
+
+                if (st.success) {
+                    Toast.makeText(requireContext(), "Booking created successfully!", Toast.LENGTH_SHORT).show()
+                    vm.consumeSuccess()
+                    findNavController().popBackStack()  // volvemos al detalle o al home, según stack
+                }
+            }
+        }
+
         updateUi()
     }
 
@@ -82,7 +111,7 @@ class BookExperienceFragment : Fragment() {
         binding.textExperienceTitle.text = title
         binding.textHostName.text = hostName
         binding.textDepartment.text = department
-        binding.textDuration.text = getString(R.string.experience_duration_hours, duration)
+        binding.textDuration.text = getString(R.string.experience_duration_days, duration)
         // ej. en strings.xml: "Duration: %1$d hours"
 
         if (!imageUrl.isNullOrBlank()) {
@@ -97,24 +126,34 @@ class BookExperienceFragment : Fragment() {
 
     private fun setupDateSelection() {
         binding.buttonSelectDates.setOnClickListener {
-            val builder = MaterialDatePicker.Builder.dateRangePicker()
-                .setTitleText(getString(R.string.select_dates))
+            // Single date picker: el usuario escoge SOLO la fecha de inicio
+            val builder = MaterialDatePicker.Builder.datePicker()
+                .setTitleText(getString(R.string.select_start_date))
 
             val picker = builder.build()
+
             picker.addOnPositiveButtonClickListener { selection ->
-                // selection es Pair<Long, Long>?
-                val start = selection?.first
-                val end = selection?.second
-                if (start != null && end != null) {
+                // selection es un Long? con el start date en millis
+                val start = selection
+                if (start != null) {
                     startDateMs = start
-                    endDateMs = end
+
+                    // duration viene de los args; lo interpretamos como "número de días"
+                    // Ej: duration = 3 → start lunes, end miércoles
+                    val days = if (duration > 0) duration else 1
+                    val millisPerDay = 24L * 60L * 60L * 1000L
+
+                    // end = start + (duration - 1) días
+                    endDateMs = start + (days - 1L) * millisPerDay
+
                     updateUi()
                 }
             }
 
-            picker.show(parentFragmentManager, "date_range_picker")
+            picker.show(parentFragmentManager, "date_picker_start")
         }
     }
+
 
     private fun setupGuestSelection() {
         binding.buttonDecreaseGuests.setOnClickListener {
@@ -132,14 +171,24 @@ class BookExperienceFragment : Fragment() {
 
     private fun setupConfirmButton() {
         binding.buttonConfirm.setOnClickListener {
-            // Aquí luego conectaremos con lógica real de booking.
-            // Por ahora simplemente hacemos back o mostramos Snackbar, etc.
-            findNavController().popBackStack()
+            val start = startDateMs ?: return@setOnClickListener
+            val end = endDateMs ?: return@setOnClickListener
+            val expId = experienceId ?: return@setOnClickListener
+
+            if (guestCount < 1) return@setOnClickListener
+
+            vm.confirmBooking(
+                experienceId = expId,
+                pricePerPerson = pricePerPerson,
+                startAtMs = start,
+                endAtMs = end,
+                peopleCount = guestCount
+            )
         }
     }
 
+
     private fun updateUi() {
-        // Texto fechas seleccionadas (card)
         val startText = startDateMs?.let { dateFormatter.format(it) } ?: "Not selected"
         val endText = endDateMs?.let { dateFormatter.format(it) } ?: "Not selected"
 
@@ -148,21 +197,18 @@ class BookExperienceFragment : Fragment() {
             startText,
             endText
         )
-        // strings.xml: "Start: %1$s   End: %2$s"
 
-        // Guest count y summary
         binding.textGuestCount.text = guestCount.toString()
         binding.textSummaryGuests.text = guestCount.toString()
         binding.textSummaryStartDate.text = if (startDateMs != null) startText else "-"
         binding.textSummaryEndDate.text = if (endDateMs != null) endText else "-"
 
-        // Total = pricePerPerson * guestCount
         val total = pricePerPerson * guestCount
         val totalFormatted = formatCop(total)
-
         binding.textSummaryTotal.text = totalFormatted
 
-        val canConfirm = startDateMs != null && endDateMs != null && guestCount >= 1
+        val hasDates = startDateMs != null && endDateMs != null
+        val canConfirm = hasDates && guestCount >= 1 && !isSaving
 
         binding.buttonConfirm.isEnabled = canConfirm
         binding.buttonConfirm.alpha = if (canConfirm) 1f else 0.5f
@@ -175,12 +221,7 @@ class BookExperienceFragment : Fragment() {
     }
 
     private fun formatCop(amount: Long): String {
-        // CurrencyInstance("es", "CO") normalmente da algo como "$ 450.000"
         return currencyFormatter.format(amount)
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
 }
