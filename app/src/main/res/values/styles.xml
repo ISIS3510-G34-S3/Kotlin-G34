@@ -38,4 +38,9 @@
 
     <!-- ALIAS para cubrir cualquier referencia que use 'Widget.MyApp.Navbar' -->
     <style name="Widget.MyApp.Navbar" parent="@style/Widget.MyApp.BottomNav"/>
+
+    <style name="CircleImageOverlay">
+        <item name="cornerSize">50%</item>
+    </style>
+
 </resources>
