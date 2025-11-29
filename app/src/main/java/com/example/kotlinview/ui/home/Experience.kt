@@ -12,5 +12,7 @@ data class Experience(
     val teachSkills: List<String> = emptyList(),
     val hostVerified: Boolean = false,
     val hostName: String = "",
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    val id: String = "",
+    val pricePerPerson: Long = 0L
 )

@@ -240,7 +240,6 @@ class FirestoreExperiencesRepository(
 
         val poolSize = maxOf(limit * 5, 100)
 
-        // Normaliza el email a excluir (1 usuario)
         val excludeEmail = excludeHostIds.firstOrNull()?.trim()?.lowercase().orEmpty()
 
         var q: Query = db.collection("experiences")

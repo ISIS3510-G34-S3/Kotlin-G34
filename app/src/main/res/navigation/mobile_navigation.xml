@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+<navigation
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/nav_graph"
+    android:id="@+id/mobile_navigation"
     app:startDestination="@id/loginFragment">
 
 <fragment
@@ -40,6 +41,78 @@
         android:name="com.example.kotlinview.ui.map.MapFragmentMap"
         android:label="Map"
         tools:layout="@layout/fragment_map_map" />
+
+    <fragment
+        android:id="@+id/experienceDetailFragment"
+        android:name="com.example.kotlinview.ui.detail.ExperienceDetailFragment"
+        android:label="Experience Detail"
+        tools:layout="@layout/fragment_experience_detail">
+
+        <argument
+            android:name="experienceId"
+            app:argType="string" />
+
+        <argument
+            android:name="experienceTitle"
+            app:argType="string" />
+
+        <argument
+            android:name="hostName"
+            app:argType="string" />
+
+        <argument
+            android:name="department"
+            app:argType="string" />
+
+        <argument
+            android:name="duration"
+            app:argType="integer" />
+
+        <argument
+            android:name="pricePerPerson"
+            app:argType="long" />
+
+        <argument
+            android:name="imageUrl"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/bookExperienceFragment"
+        android:name="com.example.kotlinview.ui.booking.BookExperienceFragment"
+        android:label="Book Experience"
+        tools:layout="@layout/fragment_book_experience">
+
+        <argument
+            android:name="experienceId"
+            app:argType="string" />
+
+        <argument
+            android:name="experienceTitle"
+            app:argType="string" />
+
+        <argument
+            android:name="hostName"
+            app:argType="string" />
+
+        <argument
+            android:name="department"
+            app:argType="string" />
+
+        <argument
+            android:name="duration"
+            app:argType="integer" />
+
+        <argument
+            android:name="pricePerPerson"
+            app:argType="long" />
+
+        <argument
+            android:name="imageUrl"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
 
 </navigation>
 
