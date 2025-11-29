@@ -20,4 +20,14 @@
     <string name="filters_duration">Duration</string>
     <string name="filters_clear">Clear</string>
     <string name="filters_apply">Apply</string>
+    <string name="back">Back</string>
+    <string name="decrease">Decrease</string>
+    <string name="increase">Increase</string>
+    <string name="book_experience_title">Book Experience</string>
+    <string name="experience_duration_days">Duration: %1$d days</string>
+    <string name="select_dates">Select dates</string>
+    <string name="selected_dates_range">Start: %1$s   End: %2$s</string>
+    <string name="confirm_booking">Confirm Booking</string>
+    <string name="confirm_booking_with_total">Confirm Booking - %1$s</string>
+    <string name="select_start_date">Select start date</string>
 </resources>

@@ -325,27 +325,33 @@ class HomeViewModel : ViewModel() {
 /* ===================== Mapeos a UI ===================== */
 private fun ExperienceDtoMap.toUi(): Experience =
     Experience(
-        title        = this.title,
-        rating       = this.avgRating,
-        department   = this.department,
-        reviewCount  = this.reviewsCount,
-        duration     = this.duration,
-        learnSkills  = this.skillsToLearn,
-        teachSkills  = this.skillsToTeach,
-        hostName     = this.hostName,
-        imageUrl     = this.images.firstOrNull().orEmpty()
+        title          = this.title,
+        rating         = this.avgRating,
+        department     = this.department,
+        reviewCount    = this.reviewsCount,
+        duration       = this.duration,
+        learnSkills    = this.skillsToLearn,
+        teachSkills    = this.skillsToTeach,
+        hostVerified   = this.hostVerified,
+        hostName       = this.hostName,
+        imageUrl       = this.images.firstOrNull().orEmpty(),
+        id             = this.id,
+        pricePerPerson = this.priceCOP
     )
 
 // Con rating override (NaN = "N/A" en el adapter)
 private fun ExperienceDtoMap.toUiWithRating(overrideRating: Double?): Experience =
     Experience(
-        title        = this.title,
-        rating       = overrideRating ?: Double.NaN,
-        department   = this.department,
-        reviewCount  = this.reviewsCount,
-        duration     = this.duration,
-        learnSkills  = this.skillsToLearn,
-        teachSkills  = this.skillsToTeach,
-        hostName     = this.hostName,
-        imageUrl     = this.images.firstOrNull().orEmpty()
+        title          = this.title,
+        rating         = overrideRating ?: Double.NaN,
+        department     = this.department,
+        reviewCount    = this.reviewsCount,
+        duration       = this.duration,
+        learnSkills    = this.skillsToLearn,
+        teachSkills    = this.skillsToTeach,
+        hostVerified   = this.hostVerified,
+        hostName       = this.hostName,
+        imageUrl       = this.images.firstOrNull().orEmpty(),
+        id             = this.id,
+        pricePerPerson = this.priceCOP
     )

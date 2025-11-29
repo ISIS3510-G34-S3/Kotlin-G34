@@ -15,14 +15,15 @@ import com.example.kotlinview.core.ServiceLocator
 import com.example.kotlinview.databinding.FragmentHomeBinding
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-
-// 🔽 imports extra necesarios para el banner y conectividad
 import com.example.kotlinview.R
 import android.view.ViewGroup.LayoutParams
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Network
 import android.content.Context
+import androidx.core.os.bundleOf
+import androidx.navigation.fragment.findNavController
+import com.example.kotlinview.ui.detail.ExperienceDetailFragment
 
 class HomeFragment : Fragment() {
 
@@ -48,7 +49,7 @@ class HomeFragment : Fragment() {
         }
     }
 
-    // 🔽 referencia al banner (para mostrar/ocultar)
+
     private var currentBanner: View? = null
 
     override fun onCreateView(
@@ -77,17 +78,13 @@ class HomeFragment : Fragment() {
                 st.error?.let {
                     Toast.makeText(requireContext(), "Error loading feed", Toast.LENGTH_SHORT).show()
                 }
-                adapter.submitList(st.items)
 
-                // 🔽 Caso clave: terminó de cargar, lista vacía y NO hay internet (modo avión)
-                // => encender banner y arrancar reintentos en el VM
-                if (!st.loading && st.items.isEmpty() && !isDeviceOnline(requireContext())) {
-                    vm.ensureAutoRetryIfEmpty()
+                adapter.submitList(st.items) {
+                    binding.rvExperiences.scrollToPosition(0)
                 }
             }
         }
 
-        // 🔽 Observa el mensaje de banner desde el VM (on/off)
         viewLifecycleOwner.lifecycleScope.launch {
             vm.bannerMessage.collectLatest { msg ->
                 if (msg.isNullOrEmpty()) {
@@ -143,20 +140,29 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupRecycler() {
+        val lm = LinearLayoutManager(requireContext())
+        binding.rvExperiences.layoutManager = lm
+
         adapter = ExperienceAdapter { exp ->
-            Toast.makeText(requireContext(), "Selected: ${exp.title}", Toast.LENGTH_SHORT).show()
-            // Aquí podrías navegar a detalle si lo tienes:
-            // findNavController().navigate(R.id.action_home_to_detail, bundleOf("id" to exp.id))
+            val args = bundleOf(
+                "experienceId"      to exp.id,
+                "experienceTitle"   to exp.title,
+                "hostName"          to exp.hostName,
+                "department"        to exp.department,
+                "duration"          to exp.duration,
+                "pricePerPerson"    to exp.pricePerPerson,
+                "imageUrl"          to exp.imageUrl
+            )
+
+            findNavController().navigate(
+                R.id.experienceDetailFragment,
+                args
+            )
         }
-        binding.rvExperiences.layoutManager = LinearLayoutManager(requireContext())
+
         binding.rvExperiences.adapter = adapter
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        dismissBanner()
-        _binding = null
-    }
 
     /* ===================== Conectividad ===================== */
     private fun isDeviceOnline(context: Context): Boolean {

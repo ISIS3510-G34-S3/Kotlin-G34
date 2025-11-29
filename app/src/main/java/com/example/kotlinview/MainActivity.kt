@@ -8,17 +8,24 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.kotlinview.databinding.ActivityMainBinding
 import com.google.android.material.navigation.NavigationBarView
 import com.google.firebase.auth.FirebaseAuth
+import com.example.kotlinview.data.experiences.BookingRetryManager
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
+    companion object {
+        private const val REQ_NOTIF_PERMISSION = 100
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // NavController del NavHost
+        BookingRetryManager.init(applicationContext)
+
         val navHost =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
 
@@ -35,10 +42,8 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        // Labels visibles
         binding.bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
 
-        // Listener de selección: navega solo a destinos que existen
         binding.bottomNav.setOnItemSelectedListener { item ->
             val targetDestId = when (item.itemId) {
                 R.id.homeFragment -> R.id.homeFragment
@@ -70,10 +75,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Reselección: no-op
         binding.bottomNav.setOnItemReselectedListener { /* no-op */ }
 
-        // Mostrar/ocultar navbar y sincronizar selección según destino actual
         navController.addOnDestinationChangedListener { _, dest, _ ->
             when (dest.id) {
                 // 🔒 En Login ocultamos completamente la barra y desmarcamos todo
@@ -110,5 +113,7 @@ class MainActivity : AppCompatActivity() {
                 else -> binding.bottomNav.visibility = View.VISIBLE
             }
         }
+
+
     }
 }
