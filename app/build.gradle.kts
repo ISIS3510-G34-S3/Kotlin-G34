@@ -88,4 +88,10 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     implementation("com.tencent:mmkv:1.3.7")
+
+    // WorkManager (eventual sync when network returns)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Firebase Storage (profile picture uploads)
+    implementation("com.google.firebase:firebase-storage")
 }

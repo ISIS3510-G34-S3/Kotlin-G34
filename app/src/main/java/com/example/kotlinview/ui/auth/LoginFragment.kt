@@ -76,6 +76,9 @@ class LoginFragment : Fragment() {
                         // Quita el banner antes de navegar para que no cubra la nueva pantalla
                         dismissBanner()
 
+                        // Start caching profile data + profile photo in app storage (survives navigation)
+                        com.example.kotlinview.core.ServiceLocator.warmProfileCacheAsync()
+
                         // Navegación directa por id de destino (Opción A)
                         val nav = findNavController()
                         val options = androidx.navigation.navOptions {
