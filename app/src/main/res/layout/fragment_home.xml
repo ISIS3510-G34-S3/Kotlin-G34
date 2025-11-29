@@ -102,26 +102,6 @@
                 app:strokeColor="@color/ash_gray"
                 app:strokeWidth="1dp"
                 app:backgroundTint="@android:color/white"/>
-
-            <Space
-                android:layout_width="12dp"
-                android:layout_height="1dp"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_map_view"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:text="Map View"
-                android:textAllCaps="false"
-                android:textColor="@color/foreground"
-                app:icon="@drawable/ic_map_24"
-                app:iconPadding="8dp"
-                app:iconTint="@color/muted_foreground"
-                app:strokeColor="@color/ash_gray"
-                app:strokeWidth="1dp"
-                app:backgroundTint="@android:color/white"/>
         </LinearLayout>
     </LinearLayout>
 

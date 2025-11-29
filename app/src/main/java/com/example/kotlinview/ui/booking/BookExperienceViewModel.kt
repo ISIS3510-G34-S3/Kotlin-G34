@@ -54,7 +54,6 @@ class BookExperienceViewModel : ViewModel() {
 
         val totalAmount = pricePerPerson * peopleCount
 
-        // 🔴 IMPORTANTE: todo lo de Firestore en IO
         viewModelScope.launch(Dispatchers.IO) {
             _state.value = BookExperienceUiState(
                 saving = true,

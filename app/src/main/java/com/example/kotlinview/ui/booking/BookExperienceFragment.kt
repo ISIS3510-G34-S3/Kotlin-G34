@@ -139,8 +139,6 @@ class BookExperienceFragment : Fragment() {
                 if (start != null) {
                     startDateMs = start
 
-                    // duration viene de los args; lo interpretamos como "número de días"
-                    // Ej: duration = 3 → start lunes, end miércoles
                     val days = if (duration > 0) duration else 1
                     val millisPerDay = 24L * 60L * 60L * 1000L
 
