@@ -101,6 +101,11 @@ class HomeFragment : Fragment() {
         maybeIncrementUsage()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        binding.rvExperiences.adapter = null
+        _binding = null
+    }
     private fun maybeIncrementUsage() {
         val now = SystemClock.elapsedRealtime()
         if (now - lastFeaturePingMs > 3000) {
@@ -127,10 +132,6 @@ class HomeFragment : Fragment() {
                 vm.loadFeed(limit = 20) // sin filtros
             }
             sheet.show(childFragmentManager, "filters")
-        }
-
-        binding.btnMapView.setOnClickListener {
-            Toast.makeText(requireContext(), "Map View (TODO)", Toast.LENGTH_SHORT).show()
         }
 
         binding.etSearch.setOnEditorActionListener { v, _, _ ->
@@ -164,7 +165,7 @@ class HomeFragment : Fragment() {
     }
 
 
-    /* ===================== Conectividad ===================== */
+    /* ===================== Conectivity ===================== */
     private fun isDeviceOnline(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = cm.activeNetwork ?: return false
@@ -172,17 +173,14 @@ class HomeFragment : Fragment() {
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
-    /* ===================== Banner centrado (degradado + borde blanco + texto blanco) ===================== */
     private fun showGradientBanner(message: String) {
-        // Asegura un solo banner
+
         dismissBanner()
 
-        // Usamos el content root del Activity para centrar correctamente
         val contentRoot = requireActivity().findViewById<ViewGroup>(android.R.id.content)
 
         fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
-        // Contenedor externo con borde blanco + esquinas redondeadas
         val outer = android.widget.FrameLayout(requireContext()).apply {
             background = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.RECTANGLE
@@ -200,7 +198,7 @@ class HomeFragment : Fragment() {
                 val m = dp(24)
                 setMargins(m, m, m, m)
             }
-            // No intercepta toques; no bloquea navegación
+
             isClickable = false
             isFocusable = false
             alpha = 0f
@@ -208,7 +206,6 @@ class HomeFragment : Fragment() {
             scaleY = 0.98f
         }
 
-        // Fondo degradado interno
         val inner = android.widget.FrameLayout(requireContext()).apply {
             setBackgroundResource(R.drawable.gradient_hero)
             setPadding(dp(16), dp(16), dp(16), dp(16))

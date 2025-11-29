@@ -31,34 +31,31 @@ object BookingRetryManager {
         startRetryLoop()
     }
 
-    /**
-     * Guarda una booking pendiente en caché local (SharedPreferences).
-     */
-    fun enqueuePending(booking: PendingBooking) {
-        scope.launch {
-            try {
-                val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                val current = prefs.getString(KEY_PENDING, "[]") ?: "[]"
-                val array = JSONArray(current)
+        fun enqueuePending(booking: PendingBooking) {
+            scope.launch {
+                try {
+                    val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    val current = prefs.getString(KEY_PENDING, "[]") ?: "[]"
+                    val array = JSONArray(current)
 
-                val obj = JSONObject().apply {
-                    put("experienceId", booking.experienceId)
-                    put("travelerEmail", booking.travelerEmail)
-                    put("startAtMs", booking.startAtMs)
-                    put("endAtMs", booking.endAtMs)
-                    put("peopleCount", booking.peopleCount)
-                    put("amountCOP", booking.amountCOP)
+                    val obj = JSONObject().apply {
+                        put("experienceId", booking.experienceId)
+                        put("travelerEmail", booking.travelerEmail)
+                        put("startAtMs", booking.startAtMs)
+                        put("endAtMs", booking.endAtMs)
+                        put("peopleCount", booking.peopleCount)
+                        put("amountCOP", booking.amountCOP)
+                    }
+
+                    array.put(obj)
+                    prefs.edit().putString(KEY_PENDING, array.toString()).apply()
+
+                    Log.d("BookingRetryManager", "Enqueued pending booking: $obj")
+                } catch (e: Exception) {
+                    Log.e("BookingRetryManager", "Error enqueuing pending booking", e)
                 }
-
-                array.put(obj)
-                prefs.edit().putString(KEY_PENDING, array.toString()).apply()
-
-                Log.d("BookingRetryManager", "Enqueued pending booking: $obj")
-            } catch (e: Exception) {
-                Log.e("BookingRetryManager", "Error enqueuing pending booking", e)
             }
         }
-    }
 
     private fun startRetryLoop() {
         scope.launch {
@@ -105,16 +102,16 @@ object BookingRetryManager {
 
             when (result) {
                 is BookingResult.Success -> {
-                    // Se envió correctamente: no lo agregamos a 'remaining'
+
                     Log.d("BookingRetryManager", "Pending booking sent successfully: $pending")
                 }
                 is BookingResult.Failure -> {
                     Log.d("BookingRetryManager", "Failed to send pending booking: reason=${result.reason}")
                     if (result.reason == BookingError.NETWORK) {
-                        // Sigue fallando por red → lo dejamos pendiente
+
                         remaining.put(obj)
                     } else {
-                        // Error lógico → se descarta silenciosamente
+                        // Logical error. Discarded
                     }
                 }
             }
