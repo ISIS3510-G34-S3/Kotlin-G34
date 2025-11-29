@@ -18,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import android.widget.Toast
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class BookExperienceFragment : Fragment() {
 
@@ -85,7 +86,7 @@ class BookExperienceFragment : Fragment() {
                 updateUi()  // para recalcular canConfirm con isSaving
 
                 st.errorMessage?.let { msg ->
-                    Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                    showErrorDialog(msg)
                 }
 
                 if (st.success) {
@@ -222,6 +223,14 @@ class BookExperienceFragment : Fragment() {
 
     private fun formatCop(amount: Long): String {
         return currencyFormatter.format(amount)
+    }
+
+    private fun showErrorDialog(message: String) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Booking issue")
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show()
     }
 
 }

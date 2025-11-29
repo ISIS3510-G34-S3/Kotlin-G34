@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.google.firebase.auth.FirebaseAuth
+import com.example.kotlinview.data.experiences.BookingRetryManager
+import com.example.kotlinview.data.experiences.PendingBooking
 
 data class BookExperienceUiState(
     val saving: Boolean = false,
@@ -73,23 +75,56 @@ class BookExperienceViewModel : ViewModel() {
                 is BookingResult.Success ->
                     BookExperienceUiState(saving = false, success = true)
 
-                is BookingResult.Failure ->
-                    BookExperienceUiState(
-                        saving = false,
-                        errorMessage = when (result.reason) {
-                            BookingError.OVER_GROUP_SIZE ->
-                                "The selected number of travelers exceeds the maximum group size for this experience."
-                            BookingError.DATES_NOT_AVAILABLE ->
-                                "Those dates are not available. Please choose another date range."
-                            BookingError.NO_TRAVELER_ID ->
-                                "You must be logged in to book this experience."
-                            BookingError.UNKNOWN ->
-                                "We couldn't create the booking. Please try again."
+                is BookingResult.Failure -> {
+                    when (result.reason) {
+                        BookingError.OVER_GROUP_SIZE ->
+                            BookExperienceUiState(
+                                saving = false,
+                                errorMessage = "The selected number of travelers exceeds the maximum group size for this experience.",
+                                success = false
+                            )
 
-                            BookingError.NETWORK -> TODO()
-                        },
-                        success = false
-                    )
+                        BookingError.DATES_NOT_AVAILABLE ->
+                            BookExperienceUiState(
+                                saving = false,
+                                errorMessage = "Those dates are not available. Please choose another date range.",
+                                success = false
+                            )
+
+                        BookingError.NO_TRAVELER_ID ->
+                            BookExperienceUiState(
+                                saving = false,
+                                errorMessage = "You must be logged in to book this experience.",
+                                success = false
+                            )
+
+                        BookingError.NETWORK -> {
+                            // Guardamos la booking en caché local para reintentar luego
+                            val pending = PendingBooking(
+                                experienceId = experienceId,
+                                travelerEmail = userEmail,
+                                startAtMs = startAtMs,
+                                endAtMs = endAtMs,
+                                peopleCount = peopleCount,
+                                amountCOP = totalAmount
+                            )
+                            BookingRetryManager.enqueuePending(pending)
+
+                            BookExperienceUiState(
+                                saving = false,
+                                errorMessage = "We couldn't reach the server. Your booking was saved and will be sent automatically when the connection is restored.",
+                                success = false
+                            )
+                        }
+
+                        BookingError.UNKNOWN ->
+                            BookExperienceUiState(
+                                saving = false,
+                                errorMessage = "We couldn't create the booking. Please try again.",
+                                success = false
+                            )
+                    }
+                }
             }
         }
     }
