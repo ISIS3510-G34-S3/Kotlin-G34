@@ -38,6 +38,11 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.btnRegister.setOnClickListener {
+            dismissBanner()
+            findNavController().navigate(R.id.createAccountFragment)
+        }
+
         // 1) Click en Login: bloquea si no hay internet y tampoco hay sesión previa local
         binding.btnLogin.setOnClickListener {
             // Cierra cualquier banner previo para evitar overlays persistentes

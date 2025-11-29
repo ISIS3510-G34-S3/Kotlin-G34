@@ -43,6 +43,12 @@
         tools:layout="@layout/fragment_map_map" />
 
     <fragment
+        android:id="@+id/createAccountFragment"
+        android:name="com.example.kotlinview.ui.auth.CreateAccountFragment"
+        android:label="Create Account"
+        tools:layout="@layout/fragment_create_account" />
+
+    <fragment
         android:id="@+id/experienceDetailFragment"
         android:name="com.example.kotlinview.ui.detail.ExperienceDetailFragment"
         android:label="Experience Detail"
