@@ -19,4 +19,11 @@ class AuthRemoteDataSource(
         }
 
     fun signOut() = auth.signOut()
+
+    suspend fun signUp(email: String, password: String): FirebaseUser =
+        suspendCancellableCoroutine { cont ->
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnSuccessListener { cont.resume(it.user!!) }
+                .addOnFailureListener { cont.resumeWithException(it) }
+        }
 }

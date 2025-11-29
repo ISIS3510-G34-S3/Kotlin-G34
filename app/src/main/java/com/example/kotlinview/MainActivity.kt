@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         navController.addOnDestinationChangedListener { _, dest, _ ->
             when (dest.id) {
                 // 🔒 En Login ocultamos completamente la barra y desmarcamos todo
-                R.id.loginFragment -> {
+                R.id.loginFragment, R.id.createAccountFragment -> {
                     binding.bottomNav.visibility = View.GONE
                     binding.bottomNav.menu.setGroupCheckable(0, false, true)
                 }

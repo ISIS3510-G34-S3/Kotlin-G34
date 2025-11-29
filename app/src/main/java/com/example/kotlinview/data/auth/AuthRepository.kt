@@ -22,4 +22,11 @@ class AuthRepository(
             )
 
     fun signOut() = remote.signOut()
+
+    suspend fun signUp(email: String, password: String): AuthResult =
+        runCatching { remote.signUp(email, password) }
+            .fold(
+                onSuccess = { AuthResult.Success(it) },
+                onFailure = { AuthResult.Error(it) }
+            )
 }
