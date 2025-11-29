@@ -28,6 +28,15 @@ import com.example.kotlinview.data.local.api.ExperienceLocalApi
 import com.example.kotlinview.data.local.api.ExperienceLocalApiImpl
 import com.tencent.mmkv.MMKV
 
+import com.example.kotlinview.data.local.datastore.ProfileStore
+import com.example.kotlinview.data.profile.ProfileRepository
+import com.example.kotlinview.data.profile.FirebaseProfileRepository
+import com.google.firebase.storage.FirebaseStorage
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
 /**
  * Super-lightweight DI for the app.
  *
@@ -42,6 +51,8 @@ object ServiceLocator {
 
     // --- App context holder (added) ---
     @Volatile private var appCtx: Context? = null
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun init(context: Context) {
         if (appCtx == null) {
@@ -192,7 +203,26 @@ object ServiceLocator {
 
         val user = repo.getByEmail(email)
         SessionManager.setUser(user)
+
+        // Warm local profile cache for offline viewing (best-effort)
+        runCatching {
+            val ctx = appCtx
+            if (ctx != null) {
+                provideProfileRepository(ctx).refreshFromRemote()
+            }
+        }
+
         return@withContext user
+    }
+
+    fun warmProfileCacheAsync() {
+        val ctx = appCtx ?: return
+        appScope.launch {
+            runCatching {
+                // This must call your Profile repository refresh method that downloads and stores cached.jpg
+                provideProfileRepository(ctx).refreshFromRemote()
+            }
+        }
     }
 
     // --- Local store singleton (Room + Files) ---
@@ -212,4 +242,20 @@ object ServiceLocator {
             experienceLocalApi ?: ExperienceLocalApiImpl(ctx).also { experienceLocalApi = it }
         }
     }
+
+    @Volatile private var profileRepoInstance: ProfileRepository? = null
+
+    fun provideProfileRepository(context: Context): ProfileRepository {
+        val ctx = appCtx ?: context.applicationContext
+        return profileRepoInstance ?: synchronized(this) {
+            profileRepoInstance ?: FirebaseProfileRepository(
+                appContext = ctx,
+                db = provideFirestore(),
+                auth = provideFirebaseAuth(),
+                storage = FirebaseStorage.getInstance(),
+                store = ProfileStore(ctx)
+            ).also { profileRepoInstance = it }
+        }
+    }
+
 }
